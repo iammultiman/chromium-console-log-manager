@@ -202,6 +202,22 @@ class ExtensionSettings {
   }
 
   /**
+   * Gets default settings
+   * @returns {Object} Default settings object
+   */
+  getDefaults() {
+    return {
+      captureEnabled: true,
+      logLevels: ['log', 'error', 'warn', 'info'],
+      retentionDays: 30,
+      maxStorageSize: 100,
+      keywordFilters: null,
+      sensitiveDataFiltering: true,
+      websiteSettings: {}
+    };
+  }
+
+  /**
    * Converts ExtensionSettings to JSON for storage
    * @returns {Object} JSON representation
    */

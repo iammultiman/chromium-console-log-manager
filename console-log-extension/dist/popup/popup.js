@@ -9,9 +9,28 @@ class PopupManager {
     this.isLoading = false;
     this.refreshInterval = null;
     
-    // Initialize notification and error handling
-    this.notificationManager = new NotificationManager();
-    this.errorHandler = new ErrorHandler(this.notificationManager);
+    // Simple error handling for popup context
+    this.errorHandler = {
+      handleError: (error, context) => {
+        console.error('Popup error:', error, context);
+      },
+      wrapAsync: async (fn, context) => {
+        try {
+          return await fn();
+        } catch (error) {
+          console.error('Popup async error:', error, context);
+          return null;
+        }
+      },
+      wrapSync: (fn, context) => {
+        try {
+          return fn();
+        } catch (error) {
+          console.error('Popup sync error:', error, context);
+          return null;
+        }
+      }
+    };
   }
 
   /**
@@ -130,17 +149,22 @@ class PopupManager {
    */
   async loadRecentLogs() {
     try {
+      console.log('Popup: Requesting recent logs...');
       const response = await chrome.runtime.sendMessage({
         type: 'GET_RECENT_LOGS',
         data: { limit: 10 }
       });
 
+      console.log('Popup: Received response', response);
+      
       if (response && response.logs) {
+        console.log('Popup: Displaying', response.logs.length, 'logs');
         this.displayRecentLogs(response.logs);
       } else {
         throw new Error(response?.error || 'Failed to load recent logs');
       }
     } catch (error) {
+      console.error('Popup: Error loading logs', error);
       this.errorHandler.handleError(error, {
         type: 'logs_load_error',
         context: 'popup'

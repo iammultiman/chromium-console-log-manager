@@ -17,6 +17,7 @@ class ExtensionBuilder {
       'manifest.json',
       'background/background.js',
       'content/content.js',
+      'content/page-console-capture.js',
       'popup/popup.html',
       'popup/popup.css',
       'popup/popup.js',

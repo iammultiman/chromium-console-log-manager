@@ -46,20 +46,24 @@ async function initialize() {
     
     // Initialize storage manager with error handling
     storageManager = new StorageManager();
-    await errorHandler.wrapAsync(
-      () => storageManager.initializeDatabase(),
-      { type: 'database_init', context: 'background_init' }
-    );
+    try {
+      await storageManager.initializeDatabase();
+    } catch (error) {
+      console.error('Failed to initialize storage:', error);
+      throw error; // Storage is critical, so re-throw
+    }
     
     // Set up error handling for storage manager
     storageManager.setErrorHandler(errorHandler);
     
     // Load extension settings with error handling
     extensionSettings = new ExtensionSettings();
-    await errorHandler.wrapAsync(
-      () => extensionSettings.load(),
-      { type: 'settings_load', context: 'background_init' }
-    );
+    try {
+      await extensionSettings.load();
+    } catch (error) {
+      console.warn('Failed to load settings, using defaults:', error.message);
+      // extensionSettings already has defaults
+    }
     
     // Initialize keyword filters if they exist in settings
     const settingsData = extensionSettings.toJSON();
@@ -127,7 +131,7 @@ async function handleMessage(message, sender) {
     // Handle each message type with error wrapping
     switch (type) {
       case 'LOG_CAPTURED':
-        console.log('Background: Received LOG_CAPTURED message', data);
+        console.log(`Background: Received LOG_CAPTURED message [${data.level}] "${data.message?.substring(0, 100)}${data.message?.length > 100 ? '...' : ''}" from ${data.url}`);
         return await errorHandler.wrapAsync(
           () => processLogMessage(data, sender),
           { type: 'log_processing', context: 'message_handler' },
@@ -228,11 +232,14 @@ async function handleMessage(message, sender) {
       return await resetSettings();
       
     case 'GET_RECENT_LOGS':
-      return await errorHandler.wrapAsync(
+      console.log('Background: Handling GET_RECENT_LOGS request', data);
+      const result = await errorHandler.wrapAsync(
         () => getRecentLogs(data),
         { type: 'recent_logs_get', context: 'message_handler' },
         { logs: [] }
       );
+      console.log('Background: GET_RECENT_LOGS response', result);
+      return result;
       
     case 'GET_STATISTICS':
       return await errorHandler.wrapAsync(
@@ -1061,6 +1068,7 @@ function cleanupInactiveSessions() {
 async function getRecentLogs(options = {}) {
   try {
     const limit = options.limit || 10;
+    console.log('Background: getRecentLogs called with limit', limit);
     
     // Query recent logs from storage (get more than needed to sort and limit)
     const logs = await storageManager.queryLogs({
@@ -1069,11 +1077,14 @@ async function getRecentLogs(options = {}) {
       endTime: Date.now()
     });
     
+    console.log('Background: queryLogs returned', logs?.length || 0, 'logs');
+    
     // Sort by timestamp descending and limit
     const sortedLogs = (logs || [])
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit);
     
+    console.log('Background: returning', sortedLogs.length, 'sorted logs');
     return { logs: sortedLogs };
     
   } catch (error) {
