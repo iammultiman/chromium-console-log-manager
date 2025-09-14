@@ -149,16 +149,16 @@ class PopupManager {
    */
   async loadRecentLogs() {
     try {
-      console.log('Popup: Requesting recent logs...');
+      // console.log('Popup: Requesting recent logs...');
       const response = await chrome.runtime.sendMessage({
         type: 'GET_RECENT_LOGS',
         data: { limit: 10 }
       });
 
-      console.log('Popup: Received response', response);
+      // console.log('Popup: Received response', response);
       
       if (response && response.logs) {
-        console.log('Popup: Displaying', response.logs.length, 'logs');
+        // console.log('Popup: Displaying', response.logs.length, 'logs');
         this.displayRecentLogs(response.logs);
       } else {
         throw new Error(response?.error || 'Failed to load recent logs');
@@ -461,10 +461,10 @@ class PopupManager {
 
 // Initialize popup when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Popup: DOM loaded, initializing popup manager');
+  // console.log('Popup: DOM loaded, initializing popup manager');
   const popupManager = new PopupManager();
   await popupManager.initialize();
-  console.log('Popup: Initialization complete');
+  // console.log('Popup: Initialization complete');
 
   // Cleanup on window unload
   window.addEventListener('beforeunload', () => {

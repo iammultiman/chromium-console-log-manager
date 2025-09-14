@@ -10,7 +10,7 @@
 class ConsoleInterceptor {
   constructor() {
     this.originalConsole = {};
-    this.isEnabled = true;
+    this.isEnabled = false; // Start as disabled, check settings later
     this.sessionId = this.generateSessionId();
     this.tabId = null;
     this.capturedLogIds = new Set(); // Track already captured logs
@@ -36,8 +36,43 @@ class ConsoleInterceptor {
     this.transmissionErrors = 0;
     this.maxTransmissionErrors = 5;
     
-    // Initialize console capture
-    this.initializeConsoleCapture();
+    // Check if extension should be enabled before initializing
+    this.checkIfEnabled();
+  }
+
+  /**
+   * Checks if the extension should be enabled for this page
+   */
+  async checkIfEnabled() {
+    try {
+      // Check if we can communicate with background script
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        // Ask background script if capture is enabled
+        const response = await chrome.runtime.sendMessage({ type: 'GET_CAPTURE_STATUS' });
+        this.isEnabled = response && response.enabled !== false;
+      } else {
+        // In testing environment, default to disabled
+        this.isEnabled = false;
+      }
+      
+      // Only initialize if enabled
+      if (this.isEnabled) {
+        this.initializeConsoleCapture();
+      } else {
+        // Clean up any existing listeners/data
+        this.cleanup();
+      }
+      
+      // Add cleanup on page unload
+      window.addEventListener('beforeunload', () => {
+        this.cleanup();
+      });
+    } catch (error) {
+      // If we can't check status, assume disabled to be safe
+      console.warn('[Console Extension] Could not check capture status, disabling:', error.message);
+      this.isEnabled = false;
+      this.cleanup();
+    }
   }
 
   /**
@@ -45,7 +80,7 @@ class ConsoleInterceptor {
    */
   initializeConsoleCapture() {
     try {
-      console.log('[Console Extension] Initializing console capture...');
+      // console.log('[Console Extension] Initializing console capture...');
       
       // Store original console methods
       this.storeOriginalMethods();
@@ -59,7 +94,7 @@ class ConsoleInterceptor {
       // Approach 3: Set up periodic log scanning
       this.startPeriodicLogScan();
       
-      console.log('[Console Extension] Console capture initialized');
+      // console.log('[Console Extension] Console capture initialized');
     } catch (error) {
       console.error('[Console Extension] Failed to initialize:', error);
     }
@@ -75,6 +110,14 @@ class ConsoleInterceptor {
     this.originalConsole.info = console.info.bind(console);
     this.originalConsole.debug = console.debug.bind(console);
     this.originalConsole.trace = console.trace.bind(console);
+  }
+
+  /**
+   * Intercepts console methods (placeholder - actual interception done by injected script)
+   */
+  interceptConsoleMethods() {
+    // Console method interception is handled by the injected page-console-capture.js script
+    // This method is kept for API compatibility
   }
 
   /**
@@ -98,7 +141,7 @@ class ConsoleInterceptor {
       this.tryDevToolsConsoleAPI();
       
     } catch (error) {
-      console.log('[Console Extension] Could not access existing logs:', error.message);
+      console.error('[Console Extension] Could not access existing logs:', error.message);
     }
   }
 
@@ -110,7 +153,7 @@ class ConsoleInterceptor {
       // Check if we can access the DevTools Console API
       if (typeof chrome !== 'undefined' && chrome.devtools) {
         // This would only work in DevTools context, not content script
-        console.log('[Console Extension] DevTools API detected but not accessible from content script');
+        console.warn('[Console Extension] DevTools API detected but not accessible from content script');
         return;
       }
       
@@ -118,7 +161,7 @@ class ConsoleInterceptor {
       this.injectPageScript();
       
     } catch (error) {
-      console.log('[Console Extension] DevTools API approach failed:', error.message);
+      console.error('[Console Extension] DevTools API approach failed:', error.message);
     }
   }
 
@@ -132,7 +175,7 @@ class ConsoleInterceptor {
       const script = document.createElement('script');
       script.src = chrome.runtime.getURL('content/page-console-capture.js');
       script.onload = () => {
-        console.log('[Console Extension] Page script loaded successfully');
+        // console.log('[Console Extension] Page script loaded successfully');
       };
       script.onerror = (error) => {
         console.error('[Console Extension] Failed to load page script:', error);
@@ -140,7 +183,7 @@ class ConsoleInterceptor {
       
       // Listen for console events from the page
       window.addEventListener('consoleLogCaptured', (event) => {
-        console.log('[Console Extension] Received console event from page:', event.detail.level, event.detail.args ? event.detail.args[0] : 'no args');
+        // console.log('[Console Extension] Received console event from page:', event.detail.level, event.detail.args ? event.detail.args[0] : 'no args');
         this.handlePageConsoleLog(event.detail);
       });
       
@@ -148,9 +191,9 @@ class ConsoleInterceptor {
       
       // Test our console capture by generating some test logs after script loads
       setTimeout(() => {
-        console.log('[Console Extension] Test log from content script');
-        console.error('[Console Extension] Test error from content script');
-        console.warn('[Console Extension] Test warning from content script');
+        // console.log('[Console Extension] Test log from content script');
+        // console.error('[Console Extension] Test error from content script');
+        // console.warn('[Console Extension] Test warning from content script');
       }, 3000);
       
     } catch (error) {
@@ -165,13 +208,13 @@ class ConsoleInterceptor {
     try {
       const { level, args, timestamp, url, source } = logDetail;
       
-      console.log(`[Console Extension] Captured ${level} from page:`, args && args[0] ? args[0] : 'no args');
+      // console.log(`[Console Extension] Captured ${level} from page:`, args && args[0] ? args[0] : 'no args');
       
       // Create log data object
       const logData = {
         id: this.generateUniqueId(),
         timestamp: timestamp || Date.now(),
-        level: level || 'log',
+        level: level || 'info',  // Changed default from 'log' to 'info' for consistency
         message: this.formatMessage(args || []),
         args: this.serializeArgs(args || []),
         url: url || window.location.href,
@@ -195,15 +238,14 @@ class ConsoleInterceptor {
    * Starts periodic scanning for new logs
    */
   startPeriodicLogScan() {
-    // Check for new logs more frequently - every 50ms
+    // Reduced frequency significantly - only check every 30 seconds as fallback
+    // Event listeners handle real-time capture, this is just a safety net
     setInterval(() => {
       this.scanForNewLogs();
-    }, 50);
+    }, 30000); // Changed from 50ms to 30000ms (30 seconds)
     
-    // Also check immediately and after a short delay
-    setTimeout(() => this.scanForNewLogs(), 100);
-    setTimeout(() => this.scanForNewLogs(), 500);
-    setTimeout(() => this.scanForNewLogs(), 1000);
+    // Also check after initial load
+    setTimeout(() => this.scanForNewLogs(), 5000);
   }
 
   /**
@@ -214,7 +256,7 @@ class ConsoleInterceptor {
       if (window._extensionLogs && Array.isArray(window._extensionLogs)) {
         const newLogs = window._extensionLogs.slice(this.capturedLogIds.size);
         if (newLogs.length > 0) {
-          console.log(`[Console Extension] Found ${newLogs.length} new logs to process`);
+          // console.log(`[Console Extension] Found ${newLogs.length} new logs to process`);
           newLogs.forEach((log, index) => {
             const logId = this.capturedLogIds.size + index;
             if (!this.capturedLogIds.has(logId)) {
@@ -431,22 +473,41 @@ class ConsoleInterceptor {
       if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
         await this.sendMessageWithRetry(logData, 0);
       } else {
-        // Fallback for testing environment - store in temporary array
-        if (!window.capturedLogs) {
-          window.capturedLogs = [];
-        }
-        window.capturedLogs.push(logData);
+        // Fallback for testing environment - store in temporary array with size limit
+        this.storeInFallbackArray(logData);
       }
     } catch (error) {
       console.error(`Content: Failed to send ${logData.level} message to background:`, error);
       // Handle transmission error
       this.handleTransmissionError(error, logData);
       
-      // Fallback for testing environment
-      if (!window.capturedLogs) {
-        window.capturedLogs = [];
-      }
-      window.capturedLogs.push(logData);
+      // Fallback for testing environment with size limit
+      this.storeInFallbackArray(logData);
+    }
+  }
+
+  /**
+   * Cleans up resources when extension is disabled or page unloads
+   */
+  cleanup() {
+    // Clear any stored logs
+    if (window.capturedLogs) {
+      window.capturedLogs.length = 0;
+    }
+    
+    if (window._extensionLogs) {
+      window._extensionLogs.length = 0;
+    }
+    
+    // Clear captured log IDs
+    this.capturedLogIds.clear();
+    
+    // Clear message queue
+    this.messageQueue.length = 0;
+    
+    // Stop periodic scanning if it exists
+    if (this.scanInterval) {
+      clearInterval(this.scanInterval);
     }
   }
 

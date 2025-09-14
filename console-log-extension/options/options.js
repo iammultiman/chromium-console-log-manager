@@ -51,13 +51,13 @@ class OptionsPageManager {
     
     if (missingModels.length > 0) {
       console.error('Missing required models:', missingModels);
-      console.log('Available models:', Object.keys(window).filter(key => 
-        requiredModels.includes(key) && typeof window[key] === 'function'
-      ));
+      // console.log('Available models:', Object.keys(window).filter(key => 
+      //   requiredModels.includes(key) && typeof window[key] === 'function'
+      // ));
       return false;
     }
     
-    console.log('All required models loaded successfully');
+    // console.log('All required models loaded successfully');
     return true;
   }
 

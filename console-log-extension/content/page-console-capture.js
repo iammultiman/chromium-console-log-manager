@@ -22,7 +22,7 @@
   console.log = function(...args) {
     originalLog.apply(console, args);
     const logEntry = {
-      level: 'log',
+      level: 'info',  // Changed from 'log' to 'info' to match Chrome's console levels
       args: args,
       timestamp: Date.now(),
       stack: new Error().stack,

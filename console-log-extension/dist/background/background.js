@@ -12,14 +12,14 @@ importScripts('../models/ErrorHandler.js');
 importScripts('../models/NotificationManager.js');
 
 // Classes are now available globally (attached to self in service worker context)
-console.log('Background: Classes loaded:', {
-  StorageManager: typeof StorageManager,
-  ExtensionSettings: typeof ExtensionSettings,
-  LogEntry: typeof LogEntry,
-  KeywordFilters: typeof KeywordFilters,
-  ErrorHandler: typeof ErrorHandler,
-  NotificationManager: typeof NotificationManager
-});
+// console.log('Background: Classes loaded:', {
+//   StorageManager: typeof StorageManager,
+//   ExtensionSettings: typeof ExtensionSettings,
+//   LogEntry: typeof LogEntry,
+//   KeywordFilters: typeof KeywordFilters,
+//   ErrorHandler: typeof ErrorHandler,
+//   NotificationManager: typeof NotificationManager
+// });
 
 
 // Initialize storage manager and settings
@@ -75,7 +75,7 @@ async function initialize() {
     }
     
     isInitialized = true;
-    console.log('Console Log Extension background script initialized');
+    // console.log('Console Log Extension background script initialized');
     
     // Set up periodic cleanup
     schedulePeriodicCleanup();
@@ -131,7 +131,7 @@ async function handleMessage(message, sender) {
     // Handle each message type with error wrapping
     switch (type) {
       case 'LOG_CAPTURED':
-        console.log(`Background: Received LOG_CAPTURED message [${data.level}] "${data.message?.substring(0, 100)}${data.message?.length > 100 ? '...' : ''}" from ${data.url}`);
+        // console.log(`Background: Received LOG_CAPTURED message [${data.level}] "${data.message?.substring(0, 100)}${data.message?.length > 100 ? '...' : ''}" from ${data.url}`);
         return await errorHandler.wrapAsync(
           () => processLogMessage(data, sender),
           { type: 'log_processing', context: 'message_handler' },
@@ -232,13 +232,13 @@ async function handleMessage(message, sender) {
       return await resetSettings();
       
     case 'GET_RECENT_LOGS':
-      console.log('Background: Handling GET_RECENT_LOGS request', data);
+      // console.log('Background: Handling GET_RECENT_LOGS request', data);
       const result = await errorHandler.wrapAsync(
         () => getRecentLogs(data),
         { type: 'recent_logs_get', context: 'message_handler' },
         { logs: [] }
       );
-      console.log('Background: GET_RECENT_LOGS response', result);
+      // console.log('Background: GET_RECENT_LOGS response', result);
       return result;
       
     case 'GET_STATISTICS':
@@ -257,6 +257,9 @@ async function handleMessage(message, sender) {
       
     case 'PING':
       return { pong: true, timestamp: Date.now() };
+      
+    case 'GET_CAPTURE_STATUS':
+      return { enabled: extensionSettings ? extensionSettings.captureEnabled : true };
       
     default:
       throw new Error(`Unknown message type: ${type}`);
@@ -713,7 +716,7 @@ async function performAutomaticCleanup() {
     };
     
     const results = await storageManager.performCleanup(retentionPolicy);
-    console.log('Automatic cleanup completed:', results);
+    // console.log('Automatic cleanup completed:', results);
   } catch (error) {
     console.error('Automatic cleanup failed:', error);
   }
@@ -1068,7 +1071,7 @@ function cleanupInactiveSessions() {
 async function getRecentLogs(options = {}) {
   try {
     const limit = options.limit || 10;
-    console.log('Background: getRecentLogs called with limit', limit);
+    // console.log('Background: getRecentLogs called with limit', limit);
     
     // Query recent logs from storage (get more than needed to sort and limit)
     const logs = await storageManager.queryLogs({
@@ -1077,14 +1080,14 @@ async function getRecentLogs(options = {}) {
       endTime: Date.now()
     });
     
-    console.log('Background: queryLogs returned', logs?.length || 0, 'logs');
+    // console.log('Background: queryLogs returned', logs?.length || 0, 'logs');
     
     // Sort by timestamp descending and limit
     const sortedLogs = (logs || [])
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit);
     
-    console.log('Background: returning', sortedLogs.length, 'sorted logs');
+    // console.log('Background: returning', sortedLogs.length, 'sorted logs');
     return { logs: sortedLogs };
     
   } catch (error) {
@@ -1314,10 +1317,10 @@ async function handleExtensionUnload() {
     if (uninstallSettings.cleanupOnUninstall) {
       // Perform data cleanup
       await performUninstallCleanup();
-      console.log('Extension data cleaned up on uninstall');
+      // console.log('Extension data cleaned up on uninstall');
     } else {
       // Just log that data is being retained
-      console.log('Extension data retained on uninstall per user preference');
+      // console.log('Extension data retained on uninstall per user preference');
     }
   } catch (error) {
     console.error('Error during extension unload cleanup:', error);
@@ -1356,7 +1359,7 @@ async function performUninstallCleanup() {
       });
     });
     
-    console.log('All extension data cleared successfully');
+    // console.log('All extension data cleared successfully');
   } catch (error) {
     console.error('Error during uninstall cleanup:', error);
     throw error;
@@ -1412,7 +1415,7 @@ async function setDefaultUninstallCleanupSettings() {
     };
     
     await setUninstallCleanupSettings(defaultSettings);
-    console.log('Default uninstall cleanup settings configured');
+    // console.log('Default uninstall cleanup settings configured');
   } catch (error) {
     console.error('Error setting default uninstall cleanup settings:', error);
   }
