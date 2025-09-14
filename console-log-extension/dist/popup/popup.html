@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Log Extension</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>Console Logs</h1>
+      <div class="status-indicator">
+        <span id="status-text">Enabled</span>
+        <div class="toggle-switch">
+          <input type="checkbox" id="enable-toggle" checked>
+          <label for="enable-toggle" class="toggle-label"></label>
+        </div>
+      </div>
+    </header>
+    
+    <main class="popup-content">
+      <section class="recent-logs">
+        <h2>Recent Activity</h2>
+        <div id="recent-logs-list" class="logs-list">
+          <div class="log-item">
+            <span class="log-level log-info">INFO</span>
+            <span class="log-message">Extension initialized</span>
+            <span class="log-time">Just now</span>
+          </div>
+        </div>
+      </section>
+      
+      <section class="quick-stats">
+        <div class="stat-item">
+          <span class="stat-label">Today's Logs:</span>
+          <span id="today-count" class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Active Sessions:</span>
+          <span id="session-count" class="stat-value">0</span>
+        </div>
+      </section>
+    </main>
+    
+    <footer class="popup-footer">
+      <button id="open-options" class="btn-primary">Settings & Logs</button>
+      <button id="clear-today" class="btn-secondary">Clear Today</button>
+    </footer>
+  </div>
+  
+  <!-- Include notification and error handling -->
+  <script src="../models/NotificationManager.js"></script>
+  <script src="../models/ErrorHandler.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

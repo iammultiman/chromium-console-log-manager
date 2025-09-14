@@ -1,0 +1,52 @@
+{
+  "timestamp": "2025-09-12T03:10:56.689Z",
+  "summary": {
+    "errors": 0,
+    "warnings": 33,
+    "status": "PASS"
+  },
+  "errors": [],
+  "warnings": [
+    "Using <all_urls> permission - ensure this is justified in store description",
+    "Using sensitive permissions: tabs - ensure these are justified",
+    "File background\\background.js may contain inline event handlers",
+    "File content\\content.js may contain inline event handlers",
+    "File icons\\create-icons.js may contain inline event handlers",
+    "File icons\\generate-png-icons.js may contain inline event handlers",
+    "File models\\CleanupScheduler.js may contain inline event handlers",
+    "File models\\ErrorHandler.js may contain inline event handlers",
+    "File models\\ExportManager.js may contain inline event handlers",
+    "File models\\ExtensionSettings.js may contain inline event handlers",
+    "File models\\FilterCriteria.js may contain inline event handlers",
+    "File models\\KeywordFilters.js may contain inline event handlers",
+    "File models\\LogEntry.js may contain inline event handlers",
+    "File models\\NotificationManager.js may contain inline event handlers",
+    "File models\\SensitiveDataDetector.js may contain inline event handlers",
+    "File models\\StorageManager.js may contain inline event handlers",
+    "File options\\options.js may contain inline event handlers",
+    "File popup\\popup.js may contain inline event handlers",
+    "File scripts\\build.js may contain inline event handlers",
+    "File scripts\\package.js may contain inline event handlers",
+    "File scripts\\validate-webstore.js may contain inline event handlers",
+    "File background\\background.js may contain tracking code: tracking",
+    "File models\\ErrorHandler.js may contain tracking code: tracking",
+    "File scripts\\package.js may contain tracking code: analytics",
+    "File scripts\\package.js may contain tracking code: tracking",
+    "File scripts\\validate-webstore.js may make network requests - ensure privacy compliance",
+    "File scripts\\validate-webstore.js may contain tracking code: google-analytics",
+    "File scripts\\validate-webstore.js may contain tracking code: gtag",
+    "File scripts\\validate-webstore.js may contain tracking code: analytics",
+    "File scripts\\validate-webstore.js may contain tracking code: tracking",
+    "File scripts\\validate-webstore.js may contain tracking code: mixpanel",
+    "File scripts\\validate-webstore.js may contain tracking code: segment",
+    "File scripts\\validate-webstore.js may contain tracking code: amplitude"
+  ],
+  "recommendations": [
+    "Review all warnings and address if possible",
+    "Test extension thoroughly before submission",
+    "Prepare detailed store description justifying permissions",
+    "Create high-quality screenshots and promotional images",
+    "Write comprehensive privacy policy",
+    "Test on different Chrome versions"
+  ]
+}

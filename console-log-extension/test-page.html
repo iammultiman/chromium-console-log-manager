@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Log Extension Test Page</title>
+</head>
+<body>
+    <h1>Console Log Extension Test Page</h1>
+    <p>This page generates various console logs to test the extension.</p>
+    
+    <div>
+        <button onclick="generateLogs()">Generate Test Logs</button>
+        <button onclick="generateErrors()">Generate Errors</button>
+        <button onclick="generateWarnings()">Generate Warnings</button>
+        <button onclick="generateInfo()">Generate Info Logs</button>
+    </div>
+
+    <script>
+        // Generate logs immediately when page loads
+        console.log('Test page loaded successfully');
+        console.info('This is an info message from the test page');
+        console.warn('This is a warning message from the test page');
+        console.error('This is an error message from the test page');
+
+        function generateLogs() {
+            console.log('User clicked Generate Test Logs button');
+            console.log('Current timestamp:', new Date().toISOString());
+            console.log('Random number:', Math.random());
+            console.log('Complex object:', {
+                name: 'Test Object',
+                values: [1, 2, 3, 4, 5],
+                nested: {
+                    property: 'nested value',
+                    array: ['a', 'b', 'c']
+                }
+            });
+        }
+
+        function generateErrors() {
+            console.error('User generated error log');
+            console.error('Error with object:', { errorCode: 500, message: 'Internal Server Error' });
+            try {
+                throw new Error('Intentional test error');
+            } catch (e) {
+                console.error('Caught error:', e);
+            }
+        }
+
+        function generateWarnings() {
+            console.warn('User generated warning log');
+            console.warn('Deprecated function warning');
+            console.warn('Performance warning: slow operation detected');
+        }
+
+        function generateInfo() {
+            console.info('User generated info log');
+            console.info('API call completed successfully');
+            console.info('User preferences loaded');
+        }
+
+        // Generate periodic logs
+        setInterval(() => {
+            console.log('Periodic log message:', new Date().toLocaleTimeString());
+        }, 10000); // Every 10 seconds
+    </script>
+</body>
+</html>

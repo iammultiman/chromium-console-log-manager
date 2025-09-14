@@ -1,0 +1,284 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run unit tests
+      run: npm run test:unit
+    
+    - name: Upload unit test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: unit-test-results-${{ matrix.node-version }}
+        path: coverage/
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run integration tests
+      run: npm run test:integration
+    
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: integration-test-results
+        path: coverage/
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run performance tests
+      run: npm run test:performance
+    
+    - name: Upload performance test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-test-results
+        path: coverage/
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run security tests
+      run: npm run test:security
+    
+    - name: Upload security test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-test-results
+        path: coverage/
+
+  compatibility-tests:
+    name: Compatibility Tests
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run compatibility tests
+      run: npm run test:compatibility
+    
+    - name: Upload compatibility test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: compatibility-test-results-${{ matrix.os }}
+        path: coverage/
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, performance-tests, security-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run all tests with coverage
+      run: npm run test:coverage
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/
+    
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './coverage/test-summary.json';
+          
+          if (fs.existsSync(path)) {
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const coverage = summary.summary.coverage;
+            
+            if (coverage) {
+              const comment = `## 📊 Test Coverage Report
+              
+              | Metric | Coverage |
+              |--------|----------|
+              | Statements | ${coverage.statements.toFixed(1)}% |
+              | Branches | ${coverage.branches.toFixed(1)}% |
+              | Functions | ${coverage.functions.toFixed(1)}% |
+              | Lines | ${coverage.lines.toFixed(1)}% |
+              
+              **Tests:** ${summary.summary.passedTests}/${summary.summary.totalTests} passed
+              **Total Time:** ${(summary.summary.totalTime / 1000).toFixed(2)}s
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          }
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, performance-tests, security-tests, compatibility-tests]
+    if: always()
+    
+    steps:
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Generate test summary
+      run: |
+        echo "# Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Test Results by Type" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if unit tests passed
+        if [ "${{ needs.unit-tests.result }}" == "success" ]; then
+          echo "✅ Unit Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Unit Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if integration tests passed
+        if [ "${{ needs.integration-tests.result }}" == "success" ]; then
+          echo "✅ Integration Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Integration Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if performance tests passed
+        if [ "${{ needs.performance-tests.result }}" == "success" ]; then
+          echo "✅ Performance Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Performance Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if security tests passed
+        if [ "${{ needs.security-tests.result }}" == "success" ]; then
+          echo "✅ Security Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Security Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Check if compatibility tests passed
+        if [ "${{ needs.compatibility-tests.result }}" == "success" ]; then
+          echo "✅ Compatibility Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Compatibility Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- Test results and coverage reports are available in the artifacts section" >> $GITHUB_STEP_SUMMARY

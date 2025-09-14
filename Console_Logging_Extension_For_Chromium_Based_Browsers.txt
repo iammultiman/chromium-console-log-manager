@@ -1,0 +1,49 @@
+Based on my research, here's what I found about existing console log extensions and their capabilities:
+
+## Key Extensions Found:
+
+### 1. **Capture.dev Chrome Extension**
+The easiest way to share console logs with a developer is to use the capture.dev Chrome Extension. With the extension installed, you can capture not only console logs but lots of extra information that a developer may find helpful for debugging.
+- **Features**: Captures console logs + additional debugging info
+- **Storage**: Generates shareable links for bug reports
+- **Limitation**: Seems focused on sharing rather than personal storage/organization
+
+### 2. **Console Ninja**
+This is primarily a **VS Code extension**, not a Chrome extension. You can export logs in various formats, such as text or JSON and it allows you to see console.log output and runtime errors right next to your code.
+- **Features**: Shows console output in VS Code editor
+- **Export**: Supports text/JSON export
+- **Limitation**: Not a browser extension, requires VS Code
+
+### 3. **Extension Log**
+Right click the extension icon and select "Export log" (save the whole page or one of the textareas). No restore function available yet, but you can access the stored values manually from the background page's javascript console.
+- **Features**: Basic log export functionality
+- **Limitation**: No advanced organization or search features
+
+## What's Missing:
+
+**None of the existing extensions provide the organized, searchable, long-term storage solution you're looking for.** Here's what they lack:
+
+- **No persistent organized storage** by website/domain
+- **No search functionality** across historical logs
+- **No filtering** by date, log level, or content
+- **No session-based organization**
+- **No advanced export options** (CSV, structured JSON, etc.)
+- **No automatic log retention policies**
+
+## Built-in Chrome Options:
+The native Chrome DevTools only offers basic export:
+Right-click anywhere in the list of errors and select Save as... from the drop-down menu - but this is manual, one-time export without any organization.
+
+## Your Custom Extension Opportunity:
+
+This gap in the market makes your custom extension idea very valuable! You could build something that offers:
+
+- **Persistent storage** using IndexedDB or chrome.storage
+- **Website-specific log organization**
+- **Advanced search and filtering**
+- **Session-based grouping**
+- **Multiple export formats**
+- **Automatic cleanup policies**
+- **Real-time log capture**
+
+The existing solutions are either too basic or focused on different use cases (like VS Code integration or one-time sharing). Your idea for a comprehensive console log management extension would fill a real need in the developer community.

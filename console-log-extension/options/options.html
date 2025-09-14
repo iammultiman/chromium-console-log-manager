@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Console Log Extension - Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <header class="options-header">
+      <h1>Console Log Extension</h1>
+      <p>Manage your console logs and configure extension settings</p>
+    </header>
+    
+    <nav class="options-nav">
+      <button class="nav-btn active" data-tab="logs">Logs</button>
+      <button class="nav-btn" data-tab="settings">Settings</button>
+      <button class="nav-btn" data-tab="export">Export</button>
+      <button class="nav-btn" data-tab="storage">Storage</button>
+    </nav>
+    
+    <main class="options-content">
+      <!-- Logs Tab -->
+      <section id="logs-tab" class="tab-content active">
+        <div class="logs-controls">
+          <div class="search-bar">
+            <input type="text" id="log-search" placeholder="Search logs...">
+            <button id="search-btn">Search</button>
+            <button id="clear-search" class="btn-secondary">Clear</button>
+          </div>
+          
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label for="level-filter">Level:</label>
+              <select id="level-filter">
+                <option value="">All Levels</option>
+                <option value="error">Error</option>
+                <option value="warn">Warning</option>
+                <option value="info">Info</option>
+                <option value="log">Log</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label for="domain-filter">Domain:</label>
+              <select id="domain-filter">
+                <option value="">All Domains</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label for="session-filter">Session:</label>
+              <select id="session-filter">
+                <option value="">All Sessions</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label for="date-from">From:</label>
+              <input type="date" id="date-from" title="From Date">
+            </div>
+            
+            <div class="filter-group">
+              <label for="date-to">To:</label>
+              <input type="date" id="date-to" title="To Date">
+            </div>
+            
+            <div class="filter-actions">
+              <button id="apply-filters" class="btn-primary">Apply Filters</button>
+              <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+            </div>
+          </div>
+          
+          <div class="view-controls">
+            <div class="view-options">
+              <label>
+                <input type="checkbox" id="show-timestamps" checked>
+                Show timestamps
+              </label>
+              <label>
+                <input type="checkbox" id="show-domains" checked>
+                Show domains
+              </label>
+              <label>
+                <input type="checkbox" id="syntax-highlighting" checked>
+                Syntax highlighting
+              </label>
+            </div>
+            
+            <div class="sort-controls">
+              <label for="sort-by">Sort by:</label>
+              <select id="sort-by">
+                <option value="timestamp-desc">Newest first</option>
+                <option value="timestamp-asc">Oldest first</option>
+                <option value="level">Log level</option>
+                <option value="domain">Domain</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="logs-display">
+          <div id="logs-list" class="logs-list">
+            <div class="log-entry">
+              <div class="log-header">
+                <span class="log-level log-info">INFO</span>
+                <span class="log-domain">example.com</span>
+                <span class="log-timestamp">2024-01-01 12:00:00</span>
+              </div>
+              <div class="log-message">Extension initialized successfully</div>
+            </div>
+          </div>
+          
+          <div class="pagination">
+            <button id="prev-page" disabled>Previous</button>
+            <span id="page-info">Page 1 of 1</span>
+            <button id="next-page" disabled>Next</button>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Settings Tab -->
+      <section id="settings-tab" class="tab-content">
+        <div class="settings-section">
+          <h2>General Settings</h2>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="capture-enabled" checked>
+              Enable log capture
+            </label>
+          </div>
+          
+          <div class="setting-item">
+            <label for="log-levels">Capture log levels:</label>
+            <div class="checkbox-group">
+              <label><input type="checkbox" name="log-levels" value="error" checked> Error</label>
+              <label><input type="checkbox" name="log-levels" value="warn" checked> Warning</label>
+              <label><input type="checkbox" name="log-levels" value="info" checked> Info</label>
+              <label><input type="checkbox" name="log-levels" value="log" checked> Log</label>
+            </div>
+          </div>
+          
+          <div class="setting-item">
+            <label for="max-logs-per-session">Maximum logs per session:</label>
+            <input type="number" id="max-logs-per-session" value="1000" min="100" max="10000">
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h2>Storage Settings</h2>
+          <div class="setting-item">
+            <label for="retention-days">Retention period (days):</label>
+            <input type="number" id="retention-days" value="30" min="1" max="365">
+          </div>
+          
+          <div class="setting-item">
+            <label for="max-storage">Maximum storage (MB):</label>
+            <input type="number" id="max-storage" value="100" min="10" max="1000">
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h2>Keyword Filters</h2>
+          <div class="setting-item">
+            <label for="include-keywords">Include keywords (comma-separated):</label>
+            <textarea id="include-keywords" placeholder="error, debug, api"></textarea>
+          </div>
+          
+          <div class="setting-item">
+            <label for="exclude-keywords">Exclude keywords (comma-separated):</label>
+            <textarea id="exclude-keywords" placeholder="noise, spam"></textarea>
+          </div>
+          
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="case-sensitive">
+              Case-sensitive matching
+            </label>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h2>Security Settings</h2>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="sensitive-data-filtering" checked>
+              Enable sensitive data filtering
+            </label>
+            <small class="setting-help">Automatically filter out potential API keys, passwords, and tokens</small>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h2>Display Settings</h2>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="hide-extension-logs">
+              Hide extension's own logs
+            </label>
+            <small class="setting-help">Filter out logs generated by this extension to reduce noise</small>
+          </div>
+          
+          <div class="setting-item">
+            <label for="logs-per-page">Logs per page:</label>
+            <select id="logs-per-page">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+            <small class="setting-help">Number of logs to display per page</small>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h2>Data Management</h2>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="cleanup-on-uninstall" checked>
+              Delete all data when extension is uninstalled
+            </label>
+            <small class="setting-help">When enabled, all console logs and settings will be permanently deleted if you uninstall the extension</small>
+          </div>
+          
+          <div class="setting-item">
+            <button id="manual-cleanup" class="btn-danger">Clear All Extension Data</button>
+            <small class="setting-help">Immediately delete all stored console logs and reset all settings to defaults</small>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h2>Website-Specific Settings</h2>
+          <div class="website-settings">
+            <div class="website-settings-header">
+              <input type="text" id="website-domain" placeholder="Enter domain (e.g., example.com)">
+              <button id="add-website-setting" class="btn-secondary">Add Website</button>
+            </div>
+            <div id="website-settings-list" class="website-settings-list">
+              <!-- Website-specific settings will be populated here -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-actions">
+          <button id="save-settings" class="btn-primary">Save Settings</button>
+          <button id="reset-settings" class="btn-secondary">Reset to Defaults</button>
+        </div>
+      </section>
+      
+      <!-- Export Tab -->
+      <section id="export-tab" class="tab-content">
+        <div class="export-section">
+          <h2>Export Logs</h2>
+          <p>Export your console logs in various formats</p>
+          
+          <div class="export-options">
+            <h3>Export Format</h3>
+            <div class="export-format">
+              <label>
+                <input type="radio" name="export-format" value="json" checked>
+                JSON (with full metadata)
+              </label>
+              <small class="format-description">Complete log data with timestamps, levels, and metadata</small>
+            </div>
+            <div class="export-format">
+              <label>
+                <input type="radio" name="export-format" value="csv">
+                CSV (spreadsheet compatible)
+              </label>
+              <small class="format-description">Tabular format for analysis in Excel or Google Sheets</small>
+            </div>
+            <div class="export-format">
+              <label>
+                <input type="radio" name="export-format" value="txt">
+                Plain Text
+              </label>
+              <small class="format-description">Simple text format for sharing or documentation</small>
+            </div>
+          </div>
+          
+          <div class="export-filters">
+            <h3>Export Scope</h3>
+            <div class="setting-item">
+              <label>
+                <input type="radio" name="export-scope" value="current-filters" checked>
+                Export filtered results only
+              </label>
+              <small class="setting-help">Export only logs matching current search and filter criteria</small>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="radio" name="export-scope" value="all">
+                Export all logs
+              </label>
+              <small class="setting-help">Export complete log history</small>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="radio" name="export-scope" value="custom">
+                Custom date range
+              </label>
+              <div class="custom-date-range">
+                <input type="date" id="export-date-from" title="Export from date">
+                <input type="date" id="export-date-to" title="Export to date">
+              </div>
+            </div>
+          </div>
+          
+          <div class="export-security">
+            <h3>Security Options</h3>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" id="exclude-sensitive-data" checked>
+                Exclude potentially sensitive data
+              </label>
+              <small class="setting-help">Filter out logs that may contain API keys, passwords, or tokens</small>
+            </div>
+          </div>
+          
+          <div class="export-preview">
+            <h3>Export Preview</h3>
+            <div id="export-preview-content" class="preview-content">
+              <p class="preview-placeholder">Click "Preview" to see export sample</p>
+            </div>
+          </div>
+          
+          <div class="export-actions">
+            <button id="export-logs" class="btn-primary">Export Logs</button>
+            <button id="preview-export" class="btn-secondary">Preview</button>
+            <button id="copy-export" class="btn-secondary">Copy to Clipboard</button>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Storage Tab -->
+      <section id="storage-tab" class="tab-content">
+        <div class="storage-section">
+          <h2>Storage Management</h2>
+          
+          <div class="storage-stats">
+            <div class="stat-card">
+              <h3>Total Logs</h3>
+              <span id="total-logs-count">0</span>
+            </div>
+            <div class="stat-card">
+              <h3>Storage Used</h3>
+              <span id="storage-used">0 MB</span>
+            </div>
+            <div class="stat-card">
+              <h3>Oldest Log</h3>
+              <span id="oldest-log">N/A</span>
+            </div>
+            <div class="stat-card">
+              <h3>Active Sessions</h3>
+              <span id="active-sessions">0</span>
+            </div>
+          </div>
+          
+          <div class="storage-breakdown">
+            <h3>Storage by Domain</h3>
+            <div id="domain-storage-list" class="domain-storage-list">
+              <!-- Domain storage breakdown will be populated here -->
+            </div>
+          </div>
+          
+          <div class="cleanup-options">
+            <h3>Cleanup Options</h3>
+            <div class="cleanup-controls">
+              <div class="cleanup-option">
+                <label for="cleanup-older-than">Clean up logs older than:</label>
+                <select id="cleanup-older-than">
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30" selected>30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                </select>
+                <button id="cleanup-by-age" class="btn-secondary">Clean Up</button>
+              </div>
+              
+              <div class="cleanup-option">
+                <label for="cleanup-domain-select">Clean up logs for domain:</label>
+                <select id="cleanup-domain-select">
+                  <option value="">Select domain...</option>
+                </select>
+                <button id="cleanup-by-domain" class="btn-secondary">Clean Up Domain</button>
+              </div>
+              
+              <div class="cleanup-option">
+                <label for="cleanup-session-select">Clean up specific session:</label>
+                <select id="cleanup-session-select">
+                  <option value="">Select session...</option>
+                </select>
+                <button id="cleanup-by-session" class="btn-secondary">Clean Up Session</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="storage-actions">
+            <button id="refresh-storage-stats" class="btn-secondary">Refresh Stats</button>
+            <button id="export-storage-report" class="btn-secondary">Export Storage Report</button>
+            <button id="clear-all" class="btn-danger">Clear All Logs</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <!-- Include model scripts -->
+  <script src="../models/LogEntry.js"></script>
+  <script src="../models/FilterCriteria.js"></script>
+  <script src="../models/StorageManager.js"></script>
+  <script src="../models/ExtensionSettings.js"></script>
+  <script src="../models/KeywordFilters.js"></script>
+  <script src="../models/ExportManager.js"></script>
+  <script src="../models/SensitiveDataDetector.js"></script>
+  <script src="../models/NotificationManager.js"></script>
+  <script src="../models/ErrorHandler.js"></script>
+  
+  <!-- Main options script -->
+  <script src="options.js"></script>
+  
+  <!-- Debug script (remove in production) -->
+  <script src="../scripts/debug-extension.js"></script>
+  
+  <!-- Initialize options page -->
+  <script src="options-init.js"></script>
+</body>
+</html>
