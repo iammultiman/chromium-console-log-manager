@@ -206,7 +206,7 @@ class ConsoleInterceptor {
    */
   handlePageConsoleLog(logDetail) {
     try {
-      const { level, args, timestamp, url, source } = logDetail;
+      const { level, args, message, timestamp, url, source } = logDetail;
       
       // console.log(`[Console Extension] Captured ${level} from page:`, args && args[0] ? args[0] : 'no args');
       
@@ -215,7 +215,7 @@ class ConsoleInterceptor {
         id: this.generateUniqueId(),
         timestamp: timestamp || Date.now(),
         level: level || 'info',  // Changed default from 'log' to 'info' for consistency
-        message: this.formatMessage(args || []),
+        message: message || this.formatMessage(args || []),
         args: this.serializeArgs(args || []),
         url: url || window.location.href,
         domain: this.extractDomain(url || window.location.href),
@@ -425,14 +425,52 @@ class ConsoleInterceptor {
 
     return args.map(arg => {
       if (typeof arg === 'object' && arg !== null) {
-        try {
-          return JSON.stringify(arg, null, 2);
-        } catch (e) {
-          return '[Object]';
-        }
+        return this.safeStringify(arg);
       }
       return String(arg);
     }).join(' ');
+  }
+
+  /**
+   * Safely stringify objects, handling circular references
+   * @param {*} obj - Object to stringify
+   * @returns {string} Safe string representation
+   */
+  safeStringify(obj) {
+    const seen = new WeakSet();
+    
+    try {
+      return JSON.stringify(obj, (key, value) => {
+        // Handle circular references
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular Reference]';
+          }
+          seen.add(value);
+        }
+        return value;
+      }, 2);
+    } catch (error) {
+      // Fallback for objects that can't be stringified
+      if (typeof obj === 'object' && obj !== null) {
+        try {
+          const simpleObj = {};
+          for (const [k, v] of Object.entries(obj)) {
+            if (typeof v === 'function') {
+              simpleObj[k] = '[Function]';
+            } else if (typeof v === 'object' && v !== null) {
+              simpleObj[k] = '[Object]';
+            } else {
+              simpleObj[k] = v;
+            }
+          }
+          return JSON.stringify(simpleObj, null, 2);
+        } catch (fallbackError) {
+          return `[Unable to stringify: ${error.message}]`;
+        }
+      }
+      return String(obj);
+    }
   }
 
   /**
@@ -446,7 +484,18 @@ class ConsoleInterceptor {
         return '[Function]';
       } else if (typeof arg === 'object' && arg !== null) {
         try {
-          return JSON.parse(JSON.stringify(arg)); // Deep clone
+          // Use safe stringify for circular reference handling
+          const seen = new WeakSet();
+          const cloned = JSON.parse(JSON.stringify(arg, (key, value) => {
+            if (typeof value === 'object' && value !== null) {
+              if (seen.has(value)) {
+                return '[Circular Reference]';
+              }
+              seen.add(value);
+            }
+            return value;
+          }));
+          return cloned;
         } catch (e) {
           return '[Object]';
         }

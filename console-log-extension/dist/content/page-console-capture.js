@@ -20,93 +20,231 @@
 
   // Override console methods in page context
   console.log = function(...args) {
-    originalLog.apply(console, args);
-    const logEntry = {
-      level: 'info',  // Changed from 'log' to 'info' to match Chrome's console levels
-      args: args,
-      timestamp: Date.now(),
-      stack: new Error().stack,
-      url: window.location.href
-    };
-    window._extensionLogs.push(logEntry);
-    window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-      detail: logEntry
-    }));
+    try {
+      originalLog.apply(console, args);
+      
+      // Safely extract a simple message from args - avoid accessing any object properties
+      let safeMessage = '';
+      try {
+        safeMessage = args.map(arg => {
+          if (typeof arg === 'string') return arg;
+          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+          // Don't try to access properties of objects - just return a generic placeholder
+          return '[Object]';
+        }).join(' ');
+      } catch (e) {
+        safeMessage = '[Error extracting message]';
+      }
+      
+      const logEntry = {
+        level: 'info',  // Changed from 'log' to 'info' to match Chrome's console levels
+        message: safeMessage,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        url: window.location.href
+      };
+      window._extensionLogs.push(logEntry);
+      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        detail: logEntry
+      }));
+    } catch (error) {
+      // Silently fail to avoid interfering with page functionality
+      try {
+        originalLog.call(console, '[Extension Error]', error.message);
+      } catch (e) {
+        // Last resort - do nothing
+      }
+    }
   };
 
   console.error = function(...args) {
-    originalError.apply(console, args);
-    const logEntry = {
-      level: 'error',
-      args: args,
-      timestamp: Date.now(),
-      stack: new Error().stack,
-      url: window.location.href
-    };
-    window._extensionLogs.push(logEntry);
-    window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-      detail: logEntry
-    }));
+    try {
+      originalError.apply(console, args);
+      
+      // Safely extract a simple message from args - avoid accessing any object properties
+      let safeMessage = '';
+      try {
+        safeMessage = args.map(arg => {
+          if (typeof arg === 'string') return arg;
+          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+          // Don't try to access properties of objects - just return a generic placeholder
+          return '[Object]';
+        }).join(' ');
+      } catch (e) {
+        safeMessage = '[Error extracting message]';
+      }
+      
+      const logEntry = {
+        level: 'error',
+        message: safeMessage,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        url: window.location.href
+      };
+      window._extensionLogs.push(logEntry);
+      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        detail: logEntry
+      }));
+    } catch (error) {
+      // Silently fail to avoid interfering with page functionality
+      try {
+        originalError.call(console, '[Extension Error]', error.message);
+      } catch (e) {
+        // Last resort - do nothing
+      }
+    }
   };
 
   console.warn = function(...args) {
-    originalWarn.apply(console, args);
-    const logEntry = {
-      level: 'warn',
-      args: args,
-      timestamp: Date.now(),
-      stack: new Error().stack,
-      url: window.location.href
-    };
-    window._extensionLogs.push(logEntry);
-    window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-      detail: logEntry
-    }));
+    try {
+      originalWarn.apply(console, args);
+      
+      // Safely extract a simple message from args - avoid accessing any object properties
+      let safeMessage = '';
+      try {
+        safeMessage = args.map(arg => {
+          if (typeof arg === 'string') return arg;
+          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+          // Don't try to access properties of objects - just return a generic placeholder
+          return '[Object]';
+        }).join(' ');
+      } catch (e) {
+        safeMessage = '[Error extracting message]';
+      }
+      
+      const logEntry = {
+        level: 'warn',
+        message: safeMessage,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        url: window.location.href
+      };
+      window._extensionLogs.push(logEntry);
+      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        detail: logEntry
+      }));
+    } catch (error) {
+      // Silently fail to avoid interfering with page functionality
+      try {
+        originalWarn.call(console, '[Extension Error]', error.message);
+      } catch (e) {
+        // Last resort - do nothing
+      }
+    }
   };
 
   console.info = function(...args) {
-    originalInfo.apply(console, args);
-    const logEntry = {
-      level: 'info',
-      args: args,
-      timestamp: Date.now(),
-      stack: new Error().stack,
-      url: window.location.href
-    };
-    window._extensionLogs.push(logEntry);
-    window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-      detail: logEntry
-    }));
+    try {
+      originalInfo.apply(console, args);
+      
+      // Safely extract a simple message from args - avoid accessing any object properties
+      let safeMessage = '';
+      try {
+        safeMessage = args.map(arg => {
+          if (typeof arg === 'string') return arg;
+          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+          // Don't try to access properties of objects - just return a generic placeholder
+          return '[Object]';
+        }).join(' ');
+      } catch (e) {
+        safeMessage = '[Error extracting message]';
+      }
+      
+      const logEntry = {
+        level: 'info',
+        message: safeMessage,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        url: window.location.href
+      };
+      window._extensionLogs.push(logEntry);
+      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        detail: logEntry
+      }));
+    } catch (error) {
+      // Silently fail to avoid interfering with page functionality
+      try {
+        originalInfo.call(console, '[Extension Error]', error.message);
+      } catch (e) {
+        // Last resort - do nothing
+      }
+    }
   };
 
   console.debug = function(...args) {
-    originalDebug.apply(console, args);
-    const logEntry = {
-      level: 'debug',
-      args: args,
-      timestamp: Date.now(),
-      stack: new Error().stack,
-      url: window.location.href
-    };
-    window._extensionLogs.push(logEntry);
-    window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-      detail: logEntry
-    }));
+    try {
+      originalDebug.apply(console, args);
+      
+      // Safely extract a simple message from args - avoid accessing any object properties
+      let safeMessage = '';
+      try {
+        safeMessage = args.map(arg => {
+          if (typeof arg === 'string') return arg;
+          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+          // Don't try to access properties of objects - just return a generic placeholder
+          return '[Object]';
+        }).join(' ');
+      } catch (e) {
+        safeMessage = '[Error extracting message]';
+      }
+      
+      const logEntry = {
+        level: 'debug',
+        message: safeMessage,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        url: window.location.href
+      };
+      window._extensionLogs.push(logEntry);
+      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        detail: logEntry
+      }));
+    } catch (error) {
+      // Silently fail to avoid interfering with page functionality
+      try {
+        originalDebug.call(console, '[Extension Error]', error.message);
+      } catch (e) {
+        // Last resort - do nothing
+      }
+    }
   };
 
   console.trace = function(...args) {
-    originalTrace.apply(console, args);
-    const logEntry = {
-      level: 'trace',
-      args: args,
-      timestamp: Date.now(),
-      stack: new Error().stack,
-      url: window.location.href
-    };
-    window._extensionLogs.push(logEntry);
-    window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-      detail: logEntry
-    }));
+    try {
+      originalTrace.apply(console, args);
+      
+      // Safely extract a simple message from args - avoid accessing any object properties
+      let safeMessage = '';
+      try {
+        safeMessage = args.map(arg => {
+          if (typeof arg === 'string') return arg;
+          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+          // Don't try to access properties of objects - just return a generic placeholder
+          return '[Object]';
+        }).join(' ');
+      } catch (e) {
+        safeMessage = '[Error extracting message]';
+      }
+      
+      const logEntry = {
+        level: 'trace',
+        message: safeMessage,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        url: window.location.href
+      };
+      window._extensionLogs.push(logEntry);
+      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        detail: logEntry
+      }));
+    } catch (error) {
+      // Silently fail to avoid interfering with page functionality
+      try {
+        originalTrace.call(console, '[Extension Error]', error.message);
+      } catch (e) {
+        // Last resort - do nothing
+      }
+    }
   };
 
   // Signal that the script has been loaded and console methods are overridden

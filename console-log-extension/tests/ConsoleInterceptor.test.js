@@ -156,7 +156,8 @@ describe('ConsoleInterceptor', () => {
       obj.self = obj; // Create circular reference
       
       const formatted = interceptor.formatMessage([obj]);
-      expect(formatted).toBe('[Object]');
+      expect(formatted).toContain('"name": "test"');
+      expect(formatted).toContain('"self": "[Circular Reference]"');
     });
 
     test('should handle empty arguments', () => {
