@@ -21,20 +21,20 @@
   // Override console methods in page context
   console.log = function(...args) {
     try {
-      originalLog.apply(console, args);
-      
-      // Safely extract a simple message from args - avoid accessing any object properties
+      // Build a safe string message and avoid passing page args through to original console
       let safeMessage = '';
       try {
         safeMessage = args.map(arg => {
           if (typeof arg === 'string') return arg;
           if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          // Don't try to access properties of objects - just return a generic placeholder
           return '[Object]';
         }).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
+
+      // Call original console with the safe string only
+      originalLog.call(console, safeMessage);
       
       const logEntry = {
         level: 'info',  // Changed from 'log' to 'info' to match Chrome's console levels
@@ -44,9 +44,11 @@
         url: window.location.href
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {
+        // Swallow any dispatch errors to avoid interfering with page scripts
+      }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
@@ -59,20 +61,20 @@
 
   console.error = function(...args) {
     try {
-      originalError.apply(console, args);
-      
-      // Safely extract a simple message from args - avoid accessing any object properties
+      // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
         safeMessage = args.map(arg => {
           if (typeof arg === 'string') return arg;
           if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          // Don't try to access properties of objects - just return a generic placeholder
           return '[Object]';
         }).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
+
+      // Call original error with safe message only
+      originalError.call(console, safeMessage);
       
       const logEntry = {
         level: 'error',
@@ -82,9 +84,11 @@
         url: window.location.href
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {
+        // Swallow any dispatch errors
+      }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
@@ -97,20 +101,20 @@
 
   console.warn = function(...args) {
     try {
-      originalWarn.apply(console, args);
-      
-      // Safely extract a simple message from args - avoid accessing any object properties
+      // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
         safeMessage = args.map(arg => {
           if (typeof arg === 'string') return arg;
           if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          // Don't try to access properties of objects - just return a generic placeholder
           return '[Object]';
         }).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
+
+      // Call original warn with safe message only
+      originalWarn.call(console, safeMessage);
       
       const logEntry = {
         level: 'warn',
@@ -120,9 +124,11 @@
         url: window.location.href
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {
+        // Swallow any dispatch errors
+      }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
@@ -135,20 +141,20 @@
 
   console.info = function(...args) {
     try {
-      originalInfo.apply(console, args);
-      
-      // Safely extract a simple message from args - avoid accessing any object properties
+      // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
         safeMessage = args.map(arg => {
           if (typeof arg === 'string') return arg;
           if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          // Don't try to access properties of objects - just return a generic placeholder
           return '[Object]';
         }).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
+
+      // Call original info with safe message only
+      originalInfo.call(console, safeMessage);
       
       const logEntry = {
         level: 'info',
@@ -158,9 +164,11 @@
         url: window.location.href
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {
+        // Swallow any dispatch errors
+      }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
@@ -173,20 +181,20 @@
 
   console.debug = function(...args) {
     try {
-      originalDebug.apply(console, args);
-      
-      // Safely extract a simple message from args - avoid accessing any object properties
+      // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
         safeMessage = args.map(arg => {
           if (typeof arg === 'string') return arg;
           if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          // Don't try to access properties of objects - just return a generic placeholder
           return '[Object]';
         }).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
+
+      // Call original debug with safe message only
+      originalDebug.call(console, safeMessage);
       
       const logEntry = {
         level: 'debug',
@@ -196,9 +204,11 @@
         url: window.location.href
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {
+        // Swallow any dispatch errors
+      }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
@@ -211,20 +221,20 @@
 
   console.trace = function(...args) {
     try {
-      originalTrace.apply(console, args);
-      
-      // Safely extract a simple message from args - avoid accessing any object properties
+      // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
         safeMessage = args.map(arg => {
           if (typeof arg === 'string') return arg;
           if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          // Don't try to access properties of objects - just return a generic placeholder
           return '[Object]';
         }).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
+
+      // Call original trace with safe message only
+      originalTrace.call(console, safeMessage);
       
       const logEntry = {
         level: 'trace',
@@ -234,9 +244,11 @@
         url: window.location.href
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {
+        // Swallow any dispatch errors
+      }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
@@ -287,9 +299,9 @@
         source: 'error_event'
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {}
     });
 
     window.addEventListener('unhandledrejection', function(event) {
@@ -302,9 +314,9 @@
         source: 'promise_rejection'
       };
       window._extensionLogs.push(logEntry);
-      window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
-        detail: logEntry
-      }));
+      try {
+        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+      } catch (e) {}
     });
 
   } catch (error) {

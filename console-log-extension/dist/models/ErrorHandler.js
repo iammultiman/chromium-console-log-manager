@@ -73,14 +73,16 @@ class ErrorHandler {
 
     // Log to console in debug mode
     if (this.debugMode) {
-      console.error('Extension Error Details:', {
+      // Stringify the details to avoid "[object Object]" in environments that stringify console args
+      const details = {
         id: errorEntry.id,
         message: errorEntry.message,
         type: errorEntry.type,
-        context: this.safeStringify(errorEntry.context),
+        context: errorEntry.context,
         severity: errorEntry.severity,
         stack: errorEntry.stack
-      });
+      };
+      console.error('Extension Error Details:', this.safeStringify(details));
     }
 
     return errorId;
