@@ -914,9 +914,9 @@ try {
   // Make interceptor available globally for testing and control
   window.consoleInterceptor = consoleInterceptor;
   
-  // Debug: Log that the content script has loaded (but don't capture this log)
-  const originalLog = console.log;
-  originalLog('Console Log Extension: Content script loaded and interceptor initialized for:', window.location.href);
+  // Suppress informational logs in production to avoid polluting page console
+  // const originalLog = console.log;
+  // originalLog('Console Log Extension: Content script loaded and interceptor initialized for:', window.location.href);
   
   // Listen for extension messages to control interceptor
   if (chrome && chrome.runtime && chrome.runtime.onMessage) {
@@ -955,7 +955,7 @@ try {
     }
   });
   
-  originalLog('Console Log Extension content script loaded and console interception active for:', window.location.hostname);
+  // originalLog('Console Log Extension content script loaded and console interception active for:', window.location.hostname);
   
 } catch (initError) {
   // Fallback error logging if interceptor initialization fails completely

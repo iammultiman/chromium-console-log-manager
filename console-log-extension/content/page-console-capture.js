@@ -70,9 +70,7 @@
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
-
-      // Call original console with the safe string only
-      originalLog.call(console, safeMessage);
+      // Do not echo info-level logs to page console to prevent noise duplication
       
       const logEntry = {
         level: 'info',  // Changed from 'log' to 'info' to match Chrome's console levels
@@ -178,9 +176,7 @@
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
-
-      // Call original info with safe message only
-      originalInfo.call(console, safeMessage);
+      // Do not echo info-level logs
       
       const logEntry = {
         level: 'info',
@@ -214,9 +210,7 @@
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
-
-      // Call original debug with safe message only
-      originalDebug.call(console, safeMessage);
+      // Do not echo debug-level logs
       
       const logEntry = {
         level: 'debug',
@@ -254,9 +248,7 @@
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
-
-      // Call original trace with safe message only
-      originalTrace.call(console, safeMessage);
+      // Do not echo trace-level logs
       
       const logEntry = {
         level: 'trace',
@@ -281,8 +273,7 @@
     }
   };
 
-  // Signal that the script has been loaded and console methods are overridden
-  console.log('[Console Extension] Page console capture script loaded and active');
+  // Suppress startup info log to avoid extension-generated messages in page console
 
   // Try to capture any existing console logs that might be stored
   try {

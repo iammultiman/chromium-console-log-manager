@@ -535,7 +535,7 @@ class ErrorHandler {
    */
   openIssueReporter(errorEntry) {
     // This could open a form or external issue tracker
-    console.log('Issue reporter would open with:', {
+  console.warn('Issue reporter would open with:', {
       id: errorEntry.id,
       message: errorEntry.message,
       type: errorEntry.type,
