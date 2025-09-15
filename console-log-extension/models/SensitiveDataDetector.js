@@ -13,6 +13,12 @@ class SensitiveDataDetector {
         description: 'API keys or access tokens',
         severity: 'high'
       },
+      // Generic API key label (value length-agnostic; conservative high severity)
+      apiKeyLabel: {
+        regex: /api\s*key\s*[:=]\s*[^\s"']+/gi,
+        description: 'API key label present',
+        severity: 'high'
+      },
       
       // JWT Tokens
       jwt: {

@@ -240,12 +240,22 @@ class StorageManager {
       offset = 0
     } = options;
     
+    // Normalize and validate time range to avoid IDBKeyRange errors
+    let start = Number.isFinite(Number(startTime)) ? Math.floor(Number(startTime)) : 0;
+    let end = Number.isFinite(Number(endTime)) ? Math.floor(Number(endTime)) : Date.now();
+    if (start < 0) start = 0;
+    if (!Number.isFinite(end) || end <= 0) end = Date.now();
+    if (end < start) {
+      // Swap or widen to a minimal valid range
+      const tmp = start; start = end; end = Math.max(tmp, start + 1);
+    }
+    
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([this.storeName], 'readonly');
       const store = transaction.objectStore(this.storeName);
       const index = store.index('timestamp');
       
-      const range = IDBKeyRange.bound(startTime, endTime);
+      const range = IDBKeyRange.bound(start, end);
       const request = index.openCursor(range);
       
       const results = [];
@@ -292,13 +302,19 @@ class StorageManager {
    */
   async getLogsByDomain(domain, startTime = 0, endTime = Date.now()) {
     const db = await this.ensureDatabase();
+    // Normalize and validate time range
+    let start = Number.isFinite(Number(startTime)) ? Math.floor(Number(startTime)) : 0;
+    let end = Number.isFinite(Number(endTime)) ? Math.floor(Number(endTime)) : Date.now();
+    if (start < 0) start = 0;
+    if (!Number.isFinite(end) || end <= 0) end = Date.now();
+    if (end < start) { const tmp = start; start = end; end = Math.max(tmp, start + 1); }
     
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([this.storeName], 'readonly');
       const store = transaction.objectStore(this.storeName);
       const index = store.index('domainTimestamp');
       
-      const range = IDBKeyRange.bound([domain, startTime], [domain, endTime]);
+      const range = IDBKeyRange.bound([domain, start], [domain, end]);
       const request = index.getAll(range);
       
       request.onsuccess = () => {

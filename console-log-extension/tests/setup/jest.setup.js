@@ -213,7 +213,9 @@ global.testUtils = {
   // Reset all mocks
   resetMocks: () => {
     jest.clearAllMocks();
-    chrome.runtime.lastError = null;
+    if (global.chrome && global.chrome.runtime) {
+      global.chrome.runtime.lastError = null;
+    }
   },
 
   // Memory measurement utilities

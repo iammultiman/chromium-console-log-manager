@@ -173,12 +173,19 @@ class ExportManager {
       offset = 0
     } = filterCriteria;
 
+    // Ensure valid numeric timestamps for IDB ranges
+    const safeStart = Number.isFinite(Number(startTime)) ? Math.floor(Number(startTime)) : 0;
+    const safeEndRaw = Number.isFinite(Number(endTime)) ? Math.floor(Number(endTime)) : Date.now();
+    const safeEnd = safeEndRaw <= 0 ? Date.now() : safeEndRaw;
+    const normalized = safeEnd >= safeStart ? { startTime: safeStart, endTime: safeEnd }
+                                            : { startTime: safeEnd, endTime: Math.max(safeStart, safeEnd + 1) };
+
     // Get logs from storage with basic filters
     const logs = await this.storageManager.queryLogs({
       levels,
       domains,
-      startTime,
-      endTime,
+      startTime: normalized.startTime,
+      endTime: normalized.endTime,
       limit,
       offset
     });
