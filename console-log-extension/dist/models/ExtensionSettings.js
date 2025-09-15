@@ -11,6 +11,8 @@ class ExtensionSettings {
     this.keywordFilters = null; // Will be set to KeywordFilters instance
     this.sensitiveDataFiltering = true;
     this.websiteSettings = new Map();
+    // Display preferences
+    this.hideExtensionLogs = true; // Hide app logs by default
   }
 
   /**
@@ -72,6 +74,16 @@ class ExtensionSettings {
    */
   setSensitiveDataFiltering(enabled) {
     this.sensitiveDataFiltering = Boolean(enabled);
+    return this;
+  }
+
+  /**
+   * Sets hide extension logs preference
+   * @param {boolean} hide - Whether to hide extension-generated logs in views and storage filtering
+   * @returns {ExtensionSettings} This instance for chaining
+   */
+  setHideExtensionLogs(hide) {
+    this.hideExtensionLogs = Boolean(hide);
     return this;
   }
 
@@ -198,6 +210,7 @@ class ExtensionSettings {
     this.keywordFilters = null;
     this.sensitiveDataFiltering = true;
     this.websiteSettings = new Map();
+    this.hideExtensionLogs = true;
     return this;
   }
 
@@ -213,7 +226,8 @@ class ExtensionSettings {
       maxStorageSize: 100,
       keywordFilters: null,
       sensitiveDataFiltering: true,
-      websiteSettings: {}
+      websiteSettings: {},
+      hideExtensionLogs: true
     };
   }
 
@@ -229,7 +243,8 @@ class ExtensionSettings {
       maxStorageSize: this.maxStorageSize,
       keywordFilters: this.keywordFilters ? this.keywordFilters.toJSON() : null,
       sensitiveDataFiltering: this.sensitiveDataFiltering,
-      websiteSettings: Object.fromEntries(this.websiteSettings)
+      websiteSettings: Object.fromEntries(this.websiteSettings),
+      hideExtensionLogs: this.hideExtensionLogs
     };
   }
 
@@ -250,6 +265,7 @@ class ExtensionSettings {
       this.maxStorageSize = Math.max(1, isNaN(parsedMaxStorageSize) ? 100 : parsedMaxStorageSize);
       
       this.sensitiveDataFiltering = Boolean(data.sensitiveDataFiltering !== false);
+  this.hideExtensionLogs = (typeof data.hideExtensionLogs === 'boolean') ? data.hideExtensionLogs : true;
       
       // Handle keyword filters
       if (data.keywordFilters && typeof require !== 'undefined') {

@@ -233,6 +233,7 @@ class StorageManager {
     const {
       levels = [],
       domains = [],
+      sessionIds = [],
       startTime = 0,
       endTime = Date.now(),
       limit = 1000,
@@ -263,8 +264,9 @@ class StorageManager {
         // Apply filters
         const levelMatch = levels.length === 0 || levels.includes(logEntry.level);
         const domainMatch = domains.length === 0 || domains.includes(logEntry.domain);
+        const sessionMatch = sessionIds.length === 0 || sessionIds.includes(logEntry.sessionId);
         
-        if (levelMatch && domainMatch) {
+        if (levelMatch && domainMatch && sessionMatch) {
           if (skipped < offset) {
             skipped++;
           } else {

@@ -229,14 +229,8 @@ class StorageManager {
       await cursor.delete();
       cursor = await cursor.continue();
     }
-  }
-}
-```
 
 ## Data Models
-
-### LogEntry Model
-```javascript
 class LogEntry {
   constructor(level, args, timestamp, url, tabId) {
     this.id = this.generateId();
@@ -630,3 +624,29 @@ class SensitiveDataDetector {
 ```
 
 This developer documentation provides the technical foundation needed to understand, maintain, and extend the Console Log Extension. For additional questions or clarifications, please refer to the main README or create an issue in the project repository.
+
+## Best Practices and Guardrails (Critical)
+
+### Page Context Namespacing and Messaging
+- Namespace page globals and events to avoid collisions with site scripts:
+  - Use `window.__clm_extensionLogs` for page log buffer (replaces `_extensionLogs`).
+  - Use `clm:consoleLogCaptured` as the CustomEvent name (replaces `consoleLogCaptured`).
+  - Keep a temporary compatibility listener for old names when migrating.
+- Do not add global `window.onerror`/`unhandledrejection` in the page context by default. If ever needed, gate behind a user-visible setting.
+- Before calling `chrome.runtime.sendMessage`, verify context and API availability:
+  - Ensure `chrome?.runtime?.id` exists and `typeof chrome.runtime.sendMessage === 'function'`.
+  - Treat “Extension context invalidated” and “Receiving end does not exist” as non-fatal; fall back to an in-memory buffer.
+
+### Logging Discipline
+- Only echo warn/error back to the page console from overrides; suppress info/debug/trace echoes to reduce noise.
+- In Options UI, avoid `console.log/info/debug/trace`; use `NotificationManager` for user feedback.
+- Tag extension-generated logs with `source: 'extension'` (and `isExtension: true` when applicable).
+
+### Default Hiding and Background Filtering
+- Honor `hideExtensionLogs` (default true) in background `GET_LOGS`/`GET_LOGS_COUNT` to reduce payload and keep UI clean by default.
+- Keep client-side defensive filtering in the Options UI for legacy entries.
+
+### Noisy Vendor Error Suppression
+- Background `shouldCaptureLog` ignores known vendor patterns like null sendMessage errors:
+  - Combined regex: `/Cannot\s+read\s+(properties|property)\s+of\s+null/i` and `/\bsendMessage\b/i`.
+  - Prevents unrelated third-party scripts from polluting the log view and exports by default.

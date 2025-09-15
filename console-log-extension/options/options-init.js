@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
   try {
     // Initialize the options page manager
     window.optionsManager = new OptionsPageManager();
-    console.log('Options page initialized successfully');
+    // Silenced info log to avoid app-generated noise
   } catch (error) {
     console.error('Failed to initialize options page:', error);
     

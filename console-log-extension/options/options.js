@@ -21,7 +21,8 @@ class OptionsPageManager {
     this.storageManager = new StorageManager();
     this.currentFilter = new FilterCriteria();
     this.extensionSettings = new ExtensionSettings();
-    this.exportManager = new ExportManager(null); // Will use background script for data access
+  // Use a lightweight storage proxy that calls background for data
+  this.exportManager = new ExportManager(this.createBackgroundStorageProxy());
     this.currentLogs = [];
     this.currentPage = 1;
     this.logsPerPage = 50;
@@ -35,6 +36,22 @@ class OptionsPageManager {
     this.initializeEventListeners();
     this.initializeBulkOperations();
     this.loadInitialData();
+  }
+
+  /**
+   * Create a minimal StorageManager-like proxy that queries via background
+   * Only implements queryLogs used by ExportManager
+   */
+  createBackgroundStorageProxy() {
+    return {
+      queryLogs: async (options = {}) => {
+        const hideExt = document.getElementById('hide-extension-logs')?.checked ?? true;
+        const resp = await chrome.runtime.sendMessage({ type: 'GET_LOGS', data: { hideExtensionLogs: hideExt, ...options } });
+        if (resp && Array.isArray(resp)) return resp; // legacy path
+        if (resp && resp.logs) return resp.logs;
+        return [];
+      }
+    };
   }
 
   /**
@@ -158,12 +175,36 @@ class OptionsPageManager {
       }
     });
     
-    // Filter controls
+  // Filter controls
     const applyFiltersBtn = document.getElementById('apply-filters');
     const clearFiltersBtn = document.getElementById('clear-filters');
+  const onlyCurrentSessionCb = document.getElementById('only-current-session');
     
     applyFiltersBtn.addEventListener('click', () => this.applyFilters());
     clearFiltersBtn.addEventListener('click', () => this.clearFilters());
+    if (onlyCurrentSessionCb) {
+      onlyCurrentSessionCb.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+          // Lock filter to current active tab session
+          const sessionId = await this.getActiveTabCurrentSessionId();
+          if (sessionId) {
+            this.currentFilter.setSessionIds([sessionId]);
+            // Also reflect in the session dropdown if present
+            const sessionSelect = document.getElementById('session-filter');
+            if (sessionSelect) sessionSelect.value = sessionId;
+          }
+        } else {
+          // Show all sessions unless user selected a specific one
+          this.currentFilter.setSessionIds([]);
+          const sessionSelect = document.getElementById('session-filter');
+          if (sessionSelect && sessionSelect.value) {
+            this.currentFilter.setSessionIds([sessionSelect.value]);
+          }
+        }
+        this.currentPage = 1;
+        this.loadLogs();
+      });
+    }
     
     // View controls
     const showTimestamps = document.getElementById('show-timestamps');
@@ -258,7 +299,8 @@ class OptionsPageManager {
     const cleanupByAgeBtn = document.getElementById('cleanup-by-age');
     const cleanupByDomainBtn = document.getElementById('cleanup-by-domain');
     const cleanupBySessionBtn = document.getElementById('cleanup-by-session');
-    const exportStorageReportBtn = document.getElementById('export-storage-report');
+  const exportStorageReportBtn = document.getElementById('export-storage-report');
+  const keepOnlyCurrentSessionBtn = document.getElementById('keep-only-current-session');
     
     refreshStatsBtn.addEventListener('click', () => this.refreshStorageStats());
     clearAllBtn.addEventListener('click', () => this.clearAllLogs());
@@ -266,6 +308,7 @@ class OptionsPageManager {
     cleanupByDomainBtn.addEventListener('click', () => this.cleanupByDomain());
     cleanupBySessionBtn.addEventListener('click', () => this.cleanupBySession());
     exportStorageReportBtn.addEventListener('click', () => this.exportStorageReport());
+    keepOnlyCurrentSessionBtn.addEventListener('click', () => this.keepOnlyCurrentSession());
   }
 
   /**
@@ -278,6 +321,17 @@ class OptionsPageManager {
         { type: 'database_init', context: 'options_init' }
       );
       
+      // Default to current tab's active session if available
+      const onlyCurrentSessionCb = document.getElementById('only-current-session');
+      if (onlyCurrentSessionCb && onlyCurrentSessionCb.checked) {
+        try {
+          const sessionId = await this.getActiveTabCurrentSessionId();
+          if (sessionId) {
+            this.currentFilter.setSessionIds([sessionId]);
+          }
+        } catch (_) { /* non-fatal */ }
+      }
+
       await this.safeAsyncOperation(
         () => this.loadLogs(),
         { type: 'logs_load', context: 'options_init' }
@@ -303,6 +357,35 @@ class OptionsPageManager {
         type: 'options_initialization',
         context: 'options_page'
       });
+    }
+  }
+
+  /**
+   * Keep only the current tab's session logs by deleting all others
+   */
+  async keepOnlyCurrentSession() {
+    try {
+      const sessionId = await this.getActiveTabCurrentSessionId();
+      if (!sessionId) {
+        this.showError('Could not determine current session. Open a page with captured logs.');
+        return;
+      }
+      const confirmMsg = `This will delete all saved logs except session:\n${sessionId}\nContinue?`;
+      if (!window.confirm(confirmMsg)) return;
+      const resp = await chrome.runtime.sendMessage({ type: 'KEEP_ONLY_SESSION', data: { sessionId } });
+      if (resp && resp.success) {
+        this.showSuccess(`Kept current session. Deleted ${resp.deletedCount || 0} other logs.`);
+        // Refresh filters, stats, and list
+        this.currentFilter.setSessionIds([sessionId]);
+        this.currentPage = 1;
+        await this.refreshStorageStats();
+        await this.populateFilterOptions();
+        await this.loadLogs();
+      } else {
+        this.showError(`Operation failed${resp && resp.error ? `: ${resp.error}` : ''}`);
+      }
+    } catch (e) {
+      this.showError(`Keep current session failed: ${e.message}`);
     }
   }
 
@@ -343,13 +426,14 @@ class OptionsPageManager {
         startTime: this.currentFilter.dateRange.start || 0,
         endTime: this.currentFilter.dateRange.end || Date.now(),
         limit: this.logsPerPage,
-        offset: offset
+        offset: offset,
+        sessionIds: this.currentFilter.sessionIds && this.currentFilter.sessionIds.length > 0 ? this.currentFilter.sessionIds : undefined
       };
       
       // Query logs from storage via background script
       const response = await chrome.runtime.sendMessage({
         type: 'GET_LOGS',
-        data: queryOptions
+        data: { ...queryOptions, hideExtensionLogs: document.getElementById('hide-extension-logs')?.checked ?? true }
       });
       
       let logs = [];
@@ -361,12 +445,9 @@ class OptionsPageManager {
         console.warn('Unexpected response format:', response);
       }
       
-      // Apply text search filter (done in memory for better performance with highlighting)
-      if (this.currentFilter.textSearch) {
-        logs = logs.filter(log => this.currentFilter.matchesTextSearch(log.message));
-      }
+      // Note: extra filtering is applied below (text search, session IDs, and optional extension hide)
       
-      // Apply session filter
+      // Apply session filter (defensive double-check in case background ignores)
       if (this.currentFilter.sessionIds.length > 0) {
         logs = logs.filter(log => this.currentFilter.sessionIds.includes(log.sessionId));
       }
@@ -374,7 +455,10 @@ class OptionsPageManager {
       // Apply extension log filter if enabled
       const hideExtensionLogs = document.getElementById('hide-extension-logs')?.checked || false;
       if (hideExtensionLogs) {
-        logs = logs.filter(log => !this.isExtensionLog(log));
+        logs = logs.filter(log => {
+          if (log && (log.source === 'extension' || log.isExtension)) return false;
+          return !this.isExtensionLog(log);
+        });
       }
       
       this.currentLogs = logs;
@@ -405,42 +489,69 @@ class OptionsPageManager {
         startTime: this.currentFilter.dateRange.start || 0,
         endTime: this.currentFilter.dateRange.end || Date.now(),
         limit: 10000, // Large limit to get all matching logs
-        offset: 0
+        offset: 0,
+        sessionIds: this.currentFilter.sessionIds && this.currentFilter.sessionIds.length > 0 ? this.currentFilter.sessionIds : undefined
       };
       
+      // Ask background for a count that already respects the "hide extension logs" toggle
       const response = await chrome.runtime.sendMessage({
         type: 'GET_LOGS_COUNT',
-        data: queryOptions
+        data: { ...queryOptions, hideExtensionLogs: document.getElementById('hide-extension-logs')?.checked ?? true }
       });
       
-      if (response && response.success) {
-        return response.count || 0;
-      } else {
-        // Fallback: get logs and count them
-        const logsResponse = await chrome.runtime.sendMessage({
-          type: 'GET_LOGS',
-          data: queryOptions
-        });
-        
-        let logs = [];
-        if (logsResponse && logsResponse.success && logsResponse.logs) {
-          logs = logsResponse.logs;
-        }
-        
-        // Apply additional filters
-        if (this.currentFilter.textSearch) {
-          logs = logs.filter(log => this.currentFilter.matchesTextSearch(log.message));
-        }
-        
-        if (this.currentFilter.sessionIds.length > 0) {
-          logs = logs.filter(log => this.currentFilter.sessionIds.includes(log.sessionId));
-        }
-        
-        return logs.length;
+      // If background provided a count (newer background), use it directly
+      if (response && typeof response.count === 'number') {
+        return response.count;
       }
+
+      // Fallback path for older background: fetch logs and count client-side
+      const logsResponse = await chrome.runtime.sendMessage({
+        type: 'GET_LOGS',
+        data: { ...queryOptions, hideExtensionLogs: document.getElementById('hide-extension-logs')?.checked ?? true }
+      });
+      
+      let logs = [];
+      if (logsResponse && Array.isArray(logsResponse)) {
+        logs = logsResponse;
+      } else if (logsResponse && Array.isArray(logsResponse.logs)) {
+        logs = logsResponse.logs;
+      }
+      
+      // Apply additional filters (defensive)
+      if (this.currentFilter.textSearch) {
+        logs = logs.filter(log => this.currentFilter.matchesTextSearch(log.message));
+      }
+      if (this.currentFilter.sessionIds.length > 0) {
+        logs = logs.filter(log => this.currentFilter.sessionIds.includes(log.sessionId));
+      }
+      const hideExtensionLogs = document.getElementById('hide-extension-logs')?.checked || false;
+      if (hideExtensionLogs) {
+        logs = logs.filter(log => {
+          if (log && (log.source === 'extension' || log.isExtension)) return false;
+          return !this.isExtensionLog(log);
+        });
+      }
+      return logs.length;
     } catch (error) {
       console.error('Failed to get total log count:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Resolve the current active tab's sessionId from background
+   * Falls back to empty string if unavailable
+   */
+  async getActiveTabCurrentSessionId() {
+    try {
+      const tabs = await new Promise((resolve) => chrome.tabs.query({ active: true, currentWindow: true }, resolve));
+      const activeTab = tabs && tabs[0];
+      if (!activeTab) return '';
+      const resp = await chrome.runtime.sendMessage({ type: 'GET_SESSION_INFO', data: { tabId: activeTab.id } });
+      if (resp && resp.active && resp.sessionId) return resp.sessionId;
+      return '';
+    } catch (e) {
+      return '';
     }
   }
 
@@ -468,9 +579,9 @@ class OptionsPageManager {
     
     this.displayLogs(sortedLogs);
   }
-
+  
   /**
-   * Display logs in the UI with proper formatting and highlighting
+   * Display logs in the UI list
    */
   displayLogs(logs) {
     const logsList = document.getElementById('logs-list');
@@ -646,7 +757,7 @@ class OptionsPageManager {
       // Get all logs to extract unique domains and sessions
       const response = await chrome.runtime.sendMessage({
         type: 'GET_LOGS',
-        data: { limit: 10000 }
+        data: { limit: 10000, hideExtensionLogs: document.getElementById('hide-extension-logs')?.checked ?? true }
       });
       
       let allLogs = [];
@@ -812,6 +923,10 @@ class OptionsPageManager {
     // Security settings
     document.getElementById('sensitive-data-filtering').checked = this.extensionSettings.sensitiveDataFiltering;
     
+    // Display settings
+    const hideExtCb = document.getElementById('hide-extension-logs');
+    if (hideExtCb) hideExtCb.checked = !!this.extensionSettings.hideExtensionLogs;
+    
     // Load uninstall cleanup settings
     this.loadUninstallCleanupSettings();
   }
@@ -884,6 +999,9 @@ class OptionsPageManager {
     // Security settings
     const sensitiveDataFiltering = document.getElementById('sensitive-data-filtering').checked;
     
+    // Display settings
+    const hideExtensionLogs = document.getElementById('hide-extension-logs')?.checked ?? true;
+    
     return {
       captureEnabled,
       maxLogsPerSession,
@@ -893,7 +1011,8 @@ class OptionsPageManager {
       includeKeywords,
       excludeKeywords,
       caseSensitive,
-      sensitiveDataFiltering
+      sensitiveDataFiltering,
+      hideExtensionLogs
     };
   }
   
@@ -933,7 +1052,8 @@ class OptionsPageManager {
       .setLogLevels(formData.logLevels)
       .setRetentionDays(formData.retentionDays)
       .setMaxStorageSize(formData.maxStorageSize)
-      .setSensitiveDataFiltering(formData.sensitiveDataFiltering);
+      .setSensitiveDataFiltering(formData.sensitiveDataFiltering)
+      .setHideExtensionLogs(formData.hideExtensionLogs);
     
     // Update max logs per session (custom property)
     this.extensionSettings.maxLogsPerSession = formData.maxLogsPerSession;
@@ -2681,7 +2801,7 @@ class OptionsPageManager {
 
 // Initialize the options page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('Console Log Extension options page loaded');
+  // Silenced options page loaded info log
   
   // Check if required models are available
   if (typeof StorageManager === 'undefined' || 

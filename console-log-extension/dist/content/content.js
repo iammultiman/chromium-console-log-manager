@@ -14,6 +14,9 @@ class ConsoleInterceptor {
     this.sessionId = this.generateSessionId();
     this.tabId = null;
     this.capturedLogIds = new Set(); // Track already captured logs
+    // In-memory fallback buffer used when background messaging is unavailable
+    this.fallbackBuffer = [];
+    this.maxFallbackSize = 200;
     
     // Error handling
     this.errorCount = 0;
@@ -153,7 +156,8 @@ class ConsoleInterceptor {
       // Check if we can access the DevTools Console API
       if (typeof chrome !== 'undefined' && chrome.devtools) {
         // This would only work in DevTools context, not content script
-        console.warn('[Console Extension] DevTools API detected but not accessible from content script');
+        // Silenced to avoid extension-generated warnings in page console
+        // console.warn('[Console Extension] DevTools API detected but not accessible from content script');
         return;
       }
       
@@ -181,9 +185,13 @@ class ConsoleInterceptor {
         console.error('[Console Extension] Failed to load page script:', error);
       };
       
-      // Listen for console events from the page
-      window.addEventListener('consoleLogCaptured', (event) => {
+      // Listen for console events from the page (namespaced)
+      window.addEventListener('clm:consoleLogCaptured', (event) => {
         // console.log('[Console Extension] Received console event from page:', event.detail.level, event.detail.args ? event.detail.args[0] : 'no args');
+        this.handlePageConsoleLog(event.detail);
+      });
+      // Backward compatibility: listen for old event name if present
+      window.addEventListener('consoleLogCaptured', (event) => {
         this.handlePageConsoleLog(event.detail);
       });
       
@@ -207,6 +215,16 @@ class ConsoleInterceptor {
   handlePageConsoleLog(logDetail) {
     try {
       const { level, args, message, timestamp, url, source } = logDetail;
+      // Suppress noisy vendor message: "Cannot read properties of null (reading 'sendMessage')"
+      try {
+        const m = String(message || '');
+        if (/Cannot\s+read\s+(properties|property)\s+of\s+null/i.test(m) && /\bsendMessage\b/i.test(m)) {
+          return; // drop before forwarding
+        }
+      } catch (_) {}
+      // Normalize level to supported set for background acceptance
+      const supportedLevels = ['log', 'error', 'warn', 'info'];
+      const normalizedLevel = supportedLevels.includes(level) ? level : 'info';
       
       // console.log(`[Console Extension] Captured ${level} from page:`, args && args[0] ? args[0] : 'no args');
       
@@ -214,7 +232,7 @@ class ConsoleInterceptor {
       const logData = {
         id: this.generateUniqueId(),
         timestamp: timestamp || Date.now(),
-        level: level || 'info',  // Changed default from 'log' to 'info' for consistency
+        level: normalizedLevel || 'info',  // Normalize unsupported levels (e.g., debug/trace) to info
         message: message || this.formatMessage(args || []),
         args: this.serializeArgs(args || []),
         url: url || window.location.href,
@@ -253,8 +271,11 @@ class ConsoleInterceptor {
    */
   scanForNewLogs() {
     try {
-      if (window._extensionLogs && Array.isArray(window._extensionLogs)) {
-        const newLogs = window._extensionLogs.slice(this.capturedLogIds.size);
+      const pageLogBuffer = (window.__clm_extensionLogs && Array.isArray(window.__clm_extensionLogs))
+        ? window.__clm_extensionLogs
+        : (window._extensionLogs && Array.isArray(window._extensionLogs)) ? window._extensionLogs : null;
+      if (pageLogBuffer) {
+        const newLogs = pageLogBuffer.slice(this.capturedLogIds.size);
         if (newLogs.length > 0) {
           // console.log(`[Console Extension] Found ${newLogs.length} new logs to process`);
           newLogs.forEach((log, index) => {
@@ -266,9 +287,8 @@ class ConsoleInterceptor {
           });
         }
       }
-      
-      // Try alternative methods to capture console logs that might have been missed
-      this.tryAlternativeLogCapture();
+      // Do not attempt alternative capture methods to avoid collecting unrelated site errors
+      // this.tryAlternativeLogCapture();
       
     } catch (error) {
       // Silently ignore scanning errors to avoid spam
@@ -518,20 +538,62 @@ class ConsoleInterceptor {
    */
   async sendToBackground(logData) {
     try {
-      // Send message to background script using Chrome extension API
-      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      // If runtime messaging isn't available (e.g., extension disabled/unloaded), use silent fallback
+      if (this.canSendToBackground()) {
+        // Send message to background script using Chrome extension API
         await this.sendMessageWithRetry(logData, 0);
       } else {
         // Fallback for testing environment - store in temporary array with size limit
         this.storeInFallbackArray(logData);
       }
     } catch (error) {
-      console.error(`Content: Failed to send ${logData.level} message to background:`, error);
-      // Handle transmission error
-      this.handleTransmissionError(error, logData);
-      
-      // Fallback for testing environment with size limit
+      // If extension context is invalidated or receiving end missing, avoid noisy page errors
+      const msg = (error && error.message) ? error.message : String(error);
+      const isContextGone = /Extension context invalidated|Receiving end does not exist|No receiving end/i.test(msg);
+      if (!isContextGone && this.originalConsole && typeof this.originalConsole.error === 'function') {
+        this.originalConsole.error(`Console Log Extension: Failed to send ${logData.level} to background`, msg);
+      }
+      // Handle transmission error only if context isn't gone
+      if (!isContextGone) {
+        this.handleTransmissionError(error, logData);
+      }
+      // Always store in fallback buffer so nothing is lost
       this.storeInFallbackArray(logData);
+    }
+  }
+
+  /**
+   * Determine if background messaging is available and safe to use
+   */
+  canSendToBackground() {
+    try {
+      // chrome.runtime may exist but id can be undefined if extension is being disabled
+      return (
+        typeof chrome !== 'undefined' &&
+        chrome.runtime &&
+        typeof chrome.runtime.sendMessage === 'function' &&
+        !!chrome.runtime.id
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Store logs in a small in-memory circular buffer when messaging is unavailable
+   */
+  storeInFallbackArray(logData) {
+    try {
+      // Attach a hint that this was not persisted
+      const entry = { ...logData, persisted: false, via: 'fallback' };
+      if (this.fallbackBuffer.length >= this.maxFallbackSize) {
+        this.fallbackBuffer.shift();
+      }
+      this.fallbackBuffer.push(entry);
+      // Expose for optional debugging without polluting page console
+      window._extensionFallbackLogs = this.fallbackBuffer;
+    } catch (_) {
+      // Swallow silently
     }
   }
 
@@ -544,8 +606,15 @@ class ConsoleInterceptor {
       window.capturedLogs.length = 0;
     }
     
+    if (window.__clm_extensionLogs) {
+      window.__clm_extensionLogs.length = 0;
+    }
     if (window._extensionLogs) {
-      window._extensionLogs.length = 0;
+      window._extensionLogs.length = 0; // legacy buffer
+    }
+    // Clear fallback buffer
+    if (this.fallbackBuffer && Array.isArray(this.fallbackBuffer)) {
+      this.fallbackBuffer.length = 0;
     }
     
     // Clear captured log IDs

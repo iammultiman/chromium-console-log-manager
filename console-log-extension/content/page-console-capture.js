@@ -15,8 +15,8 @@
   const originalDebug = console.debug;
   const originalTrace = console.trace;
 
-  // Create a storage for logs
-  window._extensionLogs = window._extensionLogs || [];
+  // Create a storage for logs (namespaced to avoid collisions)
+  window.__clm_extensionLogs = window.__clm_extensionLogs || [];
 
   // Safely convert any console arg to a readable string without exposing page internals
   function safeArgToString(arg) {
@@ -60,6 +60,14 @@
     }
   }
 
+  // Suppress noisy vendor errors like "Cannot read properties of null (reading 'sendMessage')"
+  function isSuppressedNoise(msg) {
+    try {
+      const s = String(msg || '');
+      return /Cannot\s+read\s+(properties|property)\s+of\s+null/i.test(s) && /\bsendMessage\b/i.test(s);
+    } catch (_) { return false; }
+  }
+
   // Override console methods in page context
   console.log = function(...args) {
     try {
@@ -73,22 +81,24 @@
       // Do not echo info-level logs to page console to prevent noise duplication
       
       const logEntry = {
-        level: 'info',  // Changed from 'log' to 'info' to match Chrome's console levels
+        level: 'log',
         message: safeMessage,
         timestamp: Date.now(),
         stack: new Error().stack,
         url: window.location.href
       };
-      window._extensionLogs.push(logEntry);
+      window.__clm_extensionLogs.push(logEntry);
       try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry }));
       } catch (e) {
         // Swallow any dispatch errors to avoid interfering with page scripts
       }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
-        originalLog.call(console, '[Extension Error]', error.message);
+        if (typeof originalLog === 'function') {
+          originalLog.call(console, '[Extension Error]', error.message);
+        }
       } catch (e) {
         // Last resort - do nothing
       }
@@ -105,8 +115,15 @@
         safeMessage = '[Error extracting message]';
       }
 
-      // Call original error with safe message only
-      originalError.call(console, safeMessage);
+      // Vendor noise suppression (page-side guard)
+      if (isSuppressedNoise(safeMessage)) {
+        return; // do not log or echo
+      }
+
+      // Call original error with safe message only, if still a function
+      if (typeof originalError === 'function') {
+        try { originalError.call(console, safeMessage); } catch (_) { /* noop */ }
+      }
       
       const logEntry = {
         level: 'error',
@@ -115,16 +132,18 @@
         stack: new Error().stack,
         url: window.location.href
       };
-      window._extensionLogs.push(logEntry);
+      window.__clm_extensionLogs.push(logEntry);
       try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry }));
       } catch (e) {
         // Swallow any dispatch errors
       }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
-        originalError.call(console, '[Extension Error]', error.message);
+        if (typeof originalError === 'function') {
+          originalError.call(console, '[Extension Error]', error.message);
+        }
       } catch (e) {
         // Last resort - do nothing
       }
@@ -141,8 +160,15 @@
         safeMessage = '[Error extracting message]';
       }
 
-      // Call original warn with safe message only
-      originalWarn.call(console, safeMessage);
+      // Vendor noise suppression (page-side guard)
+      if (isSuppressedNoise(safeMessage)) {
+        return;
+      }
+
+      // Call original warn with safe message only, if still a function
+      if (typeof originalWarn === 'function') {
+        try { originalWarn.call(console, safeMessage); } catch (_) { /* noop */ }
+      }
       
       const logEntry = {
         level: 'warn',
@@ -151,16 +177,18 @@
         stack: new Error().stack,
         url: window.location.href
       };
-      window._extensionLogs.push(logEntry);
+      window.__clm_extensionLogs.push(logEntry);
       try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry }));
       } catch (e) {
         // Swallow any dispatch errors
       }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
-        originalWarn.call(console, '[Extension Error]', error.message);
+        if (typeof originalWarn === 'function') {
+          originalWarn.call(console, '[Extension Error]', error.message);
+        }
       } catch (e) {
         // Last resort - do nothing
       }
@@ -185,16 +213,18 @@
         stack: new Error().stack,
         url: window.location.href
       };
-      window._extensionLogs.push(logEntry);
+      window.__clm_extensionLogs.push(logEntry);
       try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry }));
       } catch (e) {
         // Swallow any dispatch errors
       }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
-        originalInfo.call(console, '[Extension Error]', error.message);
+        if (typeof originalInfo === 'function') {
+          originalInfo.call(console, '[Extension Error]', error.message);
+        }
       } catch (e) {
         // Last resort - do nothing
       }
@@ -213,22 +243,24 @@
       // Do not echo debug-level logs
       
       const logEntry = {
-        level: 'debug',
+        level: 'log',
         message: safeMessage,
         timestamp: Date.now(),
         stack: new Error().stack,
         url: window.location.href
       };
-      window._extensionLogs.push(logEntry);
+      window.__clm_extensionLogs.push(logEntry);
       try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry }));
       } catch (e) {
         // Swallow any dispatch errors
       }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
-        originalDebug.call(console, '[Extension Error]', error.message);
+        if (typeof originalDebug === 'function') {
+          originalDebug.call(console, '[Extension Error]', error.message);
+        }
       } catch (e) {
         // Last resort - do nothing
       }
@@ -251,22 +283,24 @@
       // Do not echo trace-level logs
       
       const logEntry = {
-        level: 'trace',
+        level: 'log',
         message: safeMessage,
         timestamp: Date.now(),
         stack: new Error().stack,
         url: window.location.href
       };
-      window._extensionLogs.push(logEntry);
+      window.__clm_extensionLogs.push(logEntry);
       try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry }));
       } catch (e) {
         // Swallow any dispatch errors
       }
     } catch (error) {
       // Silently fail to avoid interfering with page functionality
       try {
-        originalTrace.call(console, '[Extension Error]', error.message);
+        if (typeof originalTrace === 'function') {
+          originalTrace.call(console, '[Extension Error]', error.message);
+        }
       } catch (e) {
         // Last resort - do nothing
       }
@@ -288,8 +322,8 @@
           url: window.location.href,
           source: 'existing'
         };
-        window._extensionLogs.push(logEntry);
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', {
+        window.__clm_extensionLogs.push(logEntry);
+        window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', {
           detail: logEntry
         }));
       });
@@ -297,15 +331,132 @@
 
     // Try to access Chrome DevTools console API if available
     if (typeof chrome !== 'undefined' && chrome.devtools && chrome.devtools.console) {
-      // This would only work in DevTools extension context
-      console.log('[Console Extension] DevTools console API detected');
+      // This would only work in DevTools extension context; don't log to page console
+      // console.debug('[Console Extension] DevTools console API detected');
     }
 
     // Global page error capture disabled by default to avoid logging unrelated site errors.
     // If needed in the future, gate this behind a user setting.
 
   } catch (error) {
-    console.log('[Console Extension] Error setting up additional capture:', error.message);
+    // Swallow setup errors silently to avoid cluttering page console
   }
+
+  // --- Additional capture: browser/network errors and unhandled rejections ---
+  // Many DevTools "Failed to load resource", CORS blocks, and rejected fetch/XHR requests
+  // do not come from console.* calls. Capture a concise, safe summary so they appear in the UI.
+  try {
+    function emitCaptured(level, message, extras) {
+      // Vendor noise suppression (event-based captures)
+      if (isSuppressedNoise(message)) return;
+      const logEntry = {
+        level,
+        message,
+        timestamp: Date.now(),
+        stack: (extras && extras.stack) || undefined,
+        url: window.location.href
+      };
+      try { window.__clm_extensionLogs.push(logEntry); } catch {}
+      try { window.dispatchEvent(new CustomEvent('clm:consoleLogCaptured', { detail: logEntry })); } catch {}
+    }
+
+    // 1) Global error events (script/runtime and some resource errors)
+    // Use capture:true to see resource element errors where available.
+    window.addEventListener('error', function onWindowError(e) {
+      try {
+        // Avoid logging extension-originated messages
+        const src = e && (e.filename || (e.target && e.target.src) || '');
+        const isExtensionSrc = typeof src === 'string' && src.startsWith('chrome-extension://');
+        if (isExtensionSrc) return;
+
+        // Build a compact message
+        let msg = '';
+        if (e.error instanceof Error) {
+          msg = e.error.stack || `${e.error.name || 'Error'}: ${e.error.message}`;
+        } else if (e.message) {
+          msg = String(e.message);
+        } else if (e.target && (e.target.src || e.target.href)) {
+          const tag = (e.target.tagName || 'resource').toLowerCase();
+          const url = e.target.src || e.target.href;
+          msg = `Resource error: <${tag}> ${url}`;
+        } else if (src) {
+          msg = `Script error at ${src}`;
+        } else {
+          msg = 'Unspecified window error';
+        }
+
+        emitCaptured('error', msg, { stack: (e.error && e.error.stack) || undefined });
+      } catch {}
+    }, true);
+
+    // 2) Unhandled promise rejections
+    window.addEventListener('unhandledrejection', function onUnhandledRejection(e) {
+      try {
+        const reason = e && e.reason;
+        const msg = reason instanceof Error
+          ? (reason.stack || `${reason.name || 'Error'}: ${reason.message}`)
+          : `Unhandled promise rejection: ${safeArgToString(reason)}`;
+        emitCaptured('error', msg, { stack: reason && reason.stack });
+      } catch {}
+    });
+
+    // 3) Wrap fetch to capture network failures and non-OK responses
+    if (typeof window.fetch === 'function') {
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async function(...args) {
+        const req = args[0];
+        const reqUrl = (typeof req === 'string') ? req : (req && req.url) ? req.url : '';
+        try {
+          const res = await originalFetch(...args);
+          if (res && !res.ok) {
+            const level = res.status >= 500 ? 'error' : 'warn';
+            emitCaptured(level, `Fetch ${res.status} ${res.statusText || ''} ${res.url || reqUrl}`.trim());
+          }
+          return res;
+        } catch (err) {
+          emitCaptured('error', `Fetch failed ${reqUrl ? `for ${reqUrl}` : ''}: ${safeArgToString(err)}`.trim());
+          throw err;
+        }
+      };
+    }
+
+    // 4) Wrap XMLHttpRequest to capture failures and non-2xx/3xx statuses
+    if (typeof XMLHttpRequest !== 'undefined') {
+      const OriginalXHR = XMLHttpRequest;
+      function WrappedXHR() {
+        const xhr = new OriginalXHR();
+        let method = 'GET';
+        let url = '';
+        const setHandlers = () => {
+          xhr.addEventListener('load', () => {
+            try {
+              const status = xhr.status || 0;
+              if (status >= 400) {
+                const level = status >= 500 ? 'error' : 'warn';
+                emitCaptured(level, `XHR ${status} ${xhr.statusText || ''} ${url}`.trim());
+              }
+            } catch {}
+          });
+          xhr.addEventListener('error', () => {
+            try { emitCaptured('error', `XHR network error ${url}`); } catch {}
+          });
+          xhr.addEventListener('abort', () => {
+            try { emitCaptured('warn', `XHR aborted ${url}`); } catch {}
+          });
+        };
+        const originalOpen = xhr.open;
+        xhr.open = function(m, u, ...rest) {
+          try { method = String(m || 'GET'); url = String(u || ''); } catch {}
+          return originalOpen.call(xhr, m, u, ...rest);
+        };
+        setHandlers();
+        return xhr;
+      }
+      // Preserve prototype chain
+      WrappedXHR.prototype = OriginalXHR.prototype;
+      // Replace global XHR constructor
+      window.XMLHttpRequest = WrappedXHR;
+    }
+  } catch {}
 
 })();
