@@ -18,17 +18,55 @@
   // Create a storage for logs
   window._extensionLogs = window._extensionLogs || [];
 
+  // Safely convert any console arg to a readable string without exposing page internals
+  function safeArgToString(arg) {
+    try {
+      if (arg === null || arg === undefined) return String(arg);
+      const t = typeof arg;
+      if (t === 'string' || t === 'number' || t === 'boolean') return String(arg);
+      // Errors: prefer stack or name: message
+      if (arg instanceof Error) {
+        return arg.stack || (arg.name ? `${arg.name}: ${arg.message}` : arg.message) || 'Error';
+      }
+      // Arrays: shallow stringify elements
+      if (Array.isArray(arg)) {
+        return `[${arg.map(safeArgToString).join(', ')}]`;
+      }
+      // DOM Nodes: show tag name to avoid dumping full HTML
+      if (typeof Node !== 'undefined' && arg instanceof Node) {
+        try { return `<${String(arg.nodeName).toLowerCase()}>`; } catch { return '<node>'; }
+      }
+      // If object has a custom toString that yields something useful
+      if (typeof arg.toString === 'function' && arg.toString !== Object.prototype.toString) {
+        const s = String(arg);
+        if (s && s !== '[object Object]') return s;
+      }
+      // Try a safe JSON stringify with circular handling and function elision
+      try {
+        const seen = new WeakSet();
+        const json = JSON.stringify(arg, (k, v) => {
+          if (typeof v === 'object' && v !== null) {
+            if (seen.has(v)) return '[Circular]';
+            seen.add(v);
+          }
+          if (typeof v === 'function') return '[Function]';
+          return v;
+        });
+        if (json && json !== '{}' && json !== '[]') return json;
+      } catch {}
+      return '[Object]';
+    } catch {
+      return '[Object]';
+    }
+  }
+
   // Override console methods in page context
   console.log = function(...args) {
     try {
       // Build a safe string message and avoid passing page args through to original console
       let safeMessage = '';
       try {
-        safeMessage = args.map(arg => {
-          if (typeof arg === 'string') return arg;
-          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          return '[Object]';
-        }).join(' ');
+        safeMessage = args.map(safeArgToString).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
@@ -64,11 +102,7 @@
       // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
-        safeMessage = args.map(arg => {
-          if (typeof arg === 'string') return arg;
-          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          return '[Object]';
-        }).join(' ');
+        safeMessage = args.map(safeArgToString).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
@@ -104,11 +138,7 @@
       // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
-        safeMessage = args.map(arg => {
-          if (typeof arg === 'string') return arg;
-          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          return '[Object]';
-        }).join(' ');
+        safeMessage = args.map(safeArgToString).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
@@ -144,11 +174,7 @@
       // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
-        safeMessage = args.map(arg => {
-          if (typeof arg === 'string') return arg;
-          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          return '[Object]';
-        }).join(' ');
+        safeMessage = args.map(safeArgToString).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
@@ -184,11 +210,7 @@
       // Build a safe string and avoid passing original args through
       let safeMessage = '';
       try {
-        safeMessage = args.map(arg => {
-          if (typeof arg === 'string') return arg;
-          if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
-          return '[Object]';
-        }).join(' ');
+        safeMessage = args.map(safeArgToString).join(' ');
       } catch (e) {
         safeMessage = '[Error extracting message]';
       }
@@ -288,36 +310,8 @@
       console.log('[Console Extension] DevTools console API detected');
     }
 
-    // Monitor for unhandled errors and promise rejections
-    window.addEventListener('error', function(event) {
-      const logEntry = {
-        level: 'error',
-        args: [event.message, event.filename + ':' + event.lineno + ':' + event.colno],
-        timestamp: Date.now(),
-        stack: event.error ? event.error.stack : null,
-        url: window.location.href,
-        source: 'error_event'
-      };
-      window._extensionLogs.push(logEntry);
-      try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
-      } catch (e) {}
-    });
-
-    window.addEventListener('unhandledrejection', function(event) {
-      const logEntry = {
-        level: 'error',
-        args: ['Unhandled promise rejection:', event.reason],
-        timestamp: Date.now(),
-        stack: event.reason && event.reason.stack ? event.reason.stack : null,
-        url: window.location.href,
-        source: 'promise_rejection'
-      };
-      window._extensionLogs.push(logEntry);
-      try {
-        window.dispatchEvent(new CustomEvent('consoleLogCaptured', { detail: logEntry }));
-      } catch (e) {}
-    });
+    // Global page error capture disabled by default to avoid logging unrelated site errors.
+    // If needed in the future, gate this behind a user setting.
 
   } catch (error) {
     console.log('[Console Extension] Error setting up additional capture:', error.message);

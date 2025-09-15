@@ -261,6 +261,22 @@ async function handleMessage(message, sender) {
     case 'GET_CAPTURE_STATUS':
       return { enabled: extensionSettings ? extensionSettings.captureEnabled : true };
       
+    case 'SETTINGS_CHANGED': {
+      // Accept either message.settings (as sent by options) or data payload
+      const incoming = (typeof message.settings !== 'undefined') ? message.settings : data;
+      return await errorHandler.wrapAsync(
+        async () => {
+          if (incoming && typeof incoming === 'object' && Object.keys(incoming).length > 0) {
+            return updateSettings(incoming);
+          }
+          // If no payload provided, just sync from storage
+          return syncSettings();
+        },
+        { type: 'settings_changed', context: 'message_handler' },
+        { success: true }
+      );
+    }
+
     default:
       throw new Error(`Unknown message type: ${type}`);
   }
