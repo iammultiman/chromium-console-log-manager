@@ -1,3 +1,5 @@
+[![A tutorial on Console Log Extension](https://img.youtube.com/vi/inJjuUiefpQ/maxresdefault.jpg)](https://youtu.be/inJjuUiefpQ)
+
 # Chromium Console Log Manager Extension
 
 A comprehensive Chrome extension for developers that captures, organizes, and manages console logs from web pages. Never lose important debugging information again with persistent storage, advanced search capabilities, and organized session management.
